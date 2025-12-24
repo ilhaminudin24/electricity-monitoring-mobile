@@ -1,30 +1,60 @@
 {
   "expo": {
-    "name": "electricity-monitoring-mobile",
-    "slug": "electricity-monitoring-mobile",
+    "name": "CatatToken.ID",
+    "slug": "catattoken",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "scheme": "catattoken",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0F172A"
     },
     "ios": {
-      "supportsTablet": true
+      "bundleIdentifier": "com.catattoken.app",
+      "supportsTablet": true,
+      "associatedDomains": [
+        "applinks:catattoken.id"
+      ]
     },
     "android": {
+      "package": "com.catattoken.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0F172A"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "catattoken"
+            },
+            {
+              "scheme": "https",
+              "host": "catattoken.id",
+              "pathPrefix": "/auth"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-web-browser",
+      "@react-native-community/datetimepicker"
+    ]
   }
 }
