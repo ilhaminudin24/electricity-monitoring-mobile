@@ -18,7 +18,6 @@ function RootLayoutNav() {
     useEffect(() => {
         const timeout = setTimeout(() => {
             if (!initialized) {
-                console.log('Forcing show after timeout');
                 setForceShow(true);
             }
         }, 3000);
@@ -33,13 +32,9 @@ function RootLayoutNav() {
 
         const inAuthGroup = segments[0] === '(auth)';
 
-        console.log('Navigation check:', { user: !!user, inAuthGroup, segments: segments[0] });
-
         if (!user && !inAuthGroup) {
-            console.log('Redirecting to login...');
             router.replace('/(auth)/login');
         } else if (user && inAuthGroup) {
-            console.log('Redirecting to tabs...');
             router.replace('/(tabs)');
         }
     }, [user, initialized, forceShow, segments]);

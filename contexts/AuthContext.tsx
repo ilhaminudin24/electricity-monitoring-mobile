@@ -63,7 +63,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const initializeAuth = async () => {
             try {
-                console.log('Initializing auth...');
 
                 // Add timeout to prevent hanging
                 const timeoutPromise = new Promise((_, reject) => {
@@ -75,7 +74,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 const { data } = await Promise.race([sessionPromise, timeoutPromise]) as any;
 
                 if (mounted) {
-                    console.log('Session loaded:', !!data?.session);
                     setState({
                         session: data?.session || null,
                         user: data?.session?.user ? mapUser(data.session.user) : null,
@@ -102,7 +100,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
-                console.log('Auth event:', event);
 
                 if (mounted) {
                     setState(prev => ({

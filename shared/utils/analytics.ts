@@ -475,11 +475,6 @@ export function prepareChartData(
                 });
             }
 
-            // DEBUG LOG
-            const totalDebug = days.reduce((sum, d) => sum + d.y, 0);
-            console.log('[Day Filter] Last reading:', format(lastReadingDate, 'yyyy-MM-dd'), 'Total kWh:', totalDebug.toFixed(1));
-            console.log('[Day Filter] Days:', days.map(d => `${d.x}: ${d.y.toFixed(1)}`).join(', '));
-
             return days;
 
         case 'week':

@@ -4,10 +4,10 @@
  */
 
 import React from 'react';
-import { View, Text, TextInput, StyleSheet, Platform } from 'react-native';
-import Slider from '@react-native-community/slider';
+import { View, Text, TextInput, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { colors } from '@/constants/colors';
 import { formatRupiah } from '@/shared/utils/rupiah';
+import { Minus, Plus } from 'lucide-react-native';
 
 interface BudgetConfigProps {
     monthlyBudget: string;
@@ -51,34 +51,34 @@ export function BudgetConfig({
                 </View>
             </View>
 
-            {/* Alert Threshold Slider */}
+            {/* Alert Threshold Stepper */}
             <View style={styles.field}>
                 <View style={styles.sliderHeader}>
                     <Text style={styles.label}>Batas Peringatan</Text>
                     <Text style={styles.thresholdValue}>{alertThreshold}%</Text>
                 </View>
-                {Platform.OS === 'web' ? (
-                    <input
-                        type="range"
-                        min={50}
-                        max={100}
-                        value={alertThreshold}
-                        onChange={(e) => onAlertThresholdChange(parseInt(e.target.value))}
-                        style={{ width: '100%' }}
-                    />
-                ) : (
-                    <Slider
-                        style={styles.slider}
-                        minimumValue={50}
-                        maximumValue={100}
-                        step={5}
-                        value={alertThreshold}
-                        onValueChange={onAlertThresholdChange}
-                        minimumTrackTintColor={colors.primary[500]}
-                        maximumTrackTintColor={colors.slate[200]}
-                        thumbTintColor={colors.primary[600]}
-                    />
-                )}
+                <View style={styles.stepperContainer}>
+                    <TouchableOpacity
+                        style={[styles.stepperButton, alertThreshold <= 50 && styles.stepperButtonDisabled]}
+                        onPress={() => alertThreshold > 50 && onAlertThresholdChange(alertThreshold - 5)}
+                        disabled={alertThreshold <= 50}
+                    >
+                        <Minus size={20} color={alertThreshold <= 50 ? colors.slate[400] : colors.text} />
+                    </TouchableOpacity>
+
+                    <View style={styles.stepperValueBox}>
+                        <View style={[styles.stepperFill, { width: `${(alertThreshold - 50) * 2}%` }]} />
+                        <Text style={styles.stepperValueText}>{alertThreshold}%</Text>
+                    </View>
+
+                    <TouchableOpacity
+                        style={[styles.stepperButton, alertThreshold >= 100 && styles.stepperButtonDisabled]}
+                        onPress={() => alertThreshold < 100 && onAlertThresholdChange(alertThreshold + 5)}
+                        disabled={alertThreshold >= 100}
+                    >
+                        <Plus size={20} color={alertThreshold >= 100 ? colors.slate[400] : colors.text} />
+                    </TouchableOpacity>
+                </View>
                 <Text style={styles.sliderHint}>
                     Peringatan akan muncul saat pemakaian mencapai {alertThreshold}% dari anggaran
                 </Text>
@@ -168,14 +168,51 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: colors.primary[600],
     },
-    slider: {
-        width: '100%',
-        height: 40,
+    stepperContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    stepperButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 10,
+        backgroundColor: colors.background,
+        borderWidth: 1,
+        borderColor: colors.border,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    stepperButtonDisabled: {
+        opacity: 0.5,
+    },
+    stepperValueBox: {
+        flex: 1,
+        height: 44,
+        borderRadius: 10,
+        backgroundColor: colors.background,
+        borderWidth: 1,
+        borderColor: colors.border,
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
+    },
+    stepperFill: {
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        bottom: 0,
+        backgroundColor: colors.primary[100],
+    },
+    stepperValueText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: colors.primary[600],
     },
     sliderHint: {
         fontSize: 12,
         color: colors.textSecondary,
-        marginTop: 4,
+        marginTop: 8,
     },
     previewRow: {
         flexDirection: 'row',
