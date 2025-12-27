@@ -3,7 +3,6 @@ import {
     TextInput,
     View,
     Text,
-    StyleSheet,
     TextInputProps,
     ViewStyle,
 } from 'react-native';
@@ -16,6 +15,7 @@ interface InputProps extends TextInputProps {
     leftIcon?: React.ReactNode;
     rightIcon?: React.ReactNode;
     variant?: 'default' | 'reading' | 'topup';
+    className?: string;
 }
 
 export function Input({
@@ -25,6 +25,7 @@ export function Input({
     leftIcon,
     rightIcon,
     variant = 'default',
+    className = '',
     style,
     ...props
 }: InputProps) {
@@ -37,79 +38,32 @@ export function Input({
     const [isFocused, setIsFocused] = React.useState(false);
 
     return (
-        <View style={[styles.container, containerStyle]}>
-            {label && <Text style={styles.label}>{label}</Text>}
+        <View className={`mb-4 ${className}`} style={containerStyle}>
+            {label && (
+                <Text className="text-sm font-medium text-slate-800 mb-1.5">
+                    {label}
+                </Text>
+            )}
             <View
-                style={[
-                    styles.inputContainer,
-                    isFocused && { borderColor: focusColor },
-                    error && styles.inputError,
-                ]}
+                className={`flex-row items-center bg-white border rounded-xl overflow-hidden ${error ? 'border-error' : 'border-border'
+                    }`}
+                style={isFocused ? { borderColor: focusColor } : undefined}
             >
-                {leftIcon && <View style={styles.iconLeft}>{leftIcon}</View>}
+                {leftIcon && <View className="pl-3">{leftIcon}</View>}
                 <TextInput
-                    style={[
-                        styles.input,
-                        leftIcon ? styles.inputWithLeftIcon : undefined,
-                        rightIcon ? styles.inputWithRightIcon : undefined,
-                        style,
-                    ]}
+                    className={`flex-1 px-4 py-3.5 text-base text-slate-800 ${leftIcon ? 'pl-2' : ''
+                        } ${rightIcon ? 'pr-2' : ''}`}
                     placeholderTextColor={colors.textSecondary}
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setIsFocused(false)}
+                    style={style}
                     {...props}
                 />
-                {rightIcon && <View style={styles.iconRight}>{rightIcon}</View>}
+                {rightIcon && <View className="pr-3">{rightIcon}</View>}
             </View>
-            {error && <Text style={styles.errorText}>{error}</Text>}
+            {error && (
+                <Text className="text-xs text-error mt-1">{error}</Text>
+            )}
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        marginBottom: 16,
-    },
-    label: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: colors.text,
-        marginBottom: 6,
-    },
-    inputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: colors.background,
-        borderWidth: 1,
-        borderColor: colors.border,
-        borderRadius: 12,
-        overflow: 'hidden',
-    },
-    input: {
-        flex: 1,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        fontSize: 16,
-        color: colors.text,
-    },
-    inputWithLeftIcon: {
-        paddingLeft: 8,
-    },
-    inputWithRightIcon: {
-        paddingRight: 8,
-    },
-    inputError: {
-        borderColor: colors.error,
-    },
-    iconLeft: {
-        paddingLeft: 12,
-    },
-    iconRight: {
-        paddingRight: 12,
-    },
-    errorText: {
-        fontSize: 12,
-        color: colors.error,
-        marginTop: 4,
-    },
-});

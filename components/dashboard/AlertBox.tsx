@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { AlertTriangle, X, TrendingUp } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 
@@ -42,15 +42,13 @@ export function AlertBox({ type, title, message, dismissable = true, onDismiss }
 
     return (
         <View
-            style={[
-                styles.container,
-                {
-                    backgroundColor: style.backgroundColor,
-                    borderColor: style.borderColor,
-                },
-            ]}
+            className="flex-row items-start p-3.5 rounded-xl border"
+            style={{
+                backgroundColor: style.backgroundColor,
+                borderColor: style.borderColor,
+            }}
         >
-            <View style={styles.iconContainer}>
+            <View className="mr-3 mt-0.5">
                 {type === 'info' ? (
                     <TrendingUp size={20} color={style.iconColor} />
                 ) : (
@@ -58,13 +56,20 @@ export function AlertBox({ type, title, message, dismissable = true, onDismiss }
                 )}
             </View>
 
-            <View style={styles.content}>
-                <Text style={[styles.title, { color: style.iconColor }]}>{title}</Text>
-                <Text style={styles.message}>{message}</Text>
+            <View className="flex-1">
+                <Text
+                    className="text-sm font-semibold mb-1"
+                    style={{ color: style.iconColor }}
+                >
+                    {title}
+                </Text>
+                <Text className="text-[13px] text-slate-500 leading-[18px]">
+                    {message}
+                </Text>
             </View>
 
             {dismissable && onDismiss && (
-                <TouchableOpacity style={styles.dismissButton} onPress={onDismiss}>
+                <TouchableOpacity className="p-1 ml-2" onPress={onDismiss}>
                     <X size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
             )}
@@ -85,7 +90,7 @@ export function UsageAlert({ percentage, threshold, onDismiss }: UsageAlertProps
     const isOverBudget = percentage >= 100;
 
     return (
-        <View style={styles.alertWrapper}>
+        <View className="mx-6 mb-3">
             <AlertBox
                 type={isOverBudget ? 'danger' : 'warning'}
                 title={isOverBudget ? 'Melebihi Budget!' : 'Peringatan Penggunaan'}
@@ -99,38 +104,3 @@ export function UsageAlert({ percentage, threshold, onDismiss }: UsageAlertProps
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    alertWrapper: {
-        marginHorizontal: 24,
-        marginBottom: 12,
-    },
-    container: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        padding: 14,
-        borderRadius: 12,
-        borderWidth: 1,
-    },
-    iconContainer: {
-        marginRight: 12,
-        marginTop: 2,
-    },
-    content: {
-        flex: 1,
-    },
-    title: {
-        fontSize: 14,
-        fontWeight: '600',
-        marginBottom: 4,
-    },
-    message: {
-        fontSize: 13,
-        color: colors.textSecondary,
-        lineHeight: 18,
-    },
-    dismissButton: {
-        padding: 4,
-        marginLeft: 8,
-    },
-});

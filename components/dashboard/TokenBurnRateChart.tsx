@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import { LineChart } from 'react-native-chart-kit';
-import { format } from 'date-fns';
+import { View, Text, Dimensions } from 'react-native';
+import { CartesianChart, Line, Area, useChartPressState } from 'victory-native';
+import { Circle } from '@shopify/react-native-skia';
+import { format, differenceInDays } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { colors } from '@/constants/colors';
 import { BurnRateProjection } from '@/shared/utils/analytics';
@@ -12,7 +13,7 @@ interface TokenBurnRateChartProps {
 }
 
 const screenWidth = Dimensions.get('window').width;
-const chartWidth = screenWidth - 72;
+const CHART_HEIGHT = 160;
 
 export function TokenBurnRateChart({ burnRateData, loading }: TokenBurnRateChartProps) {
     const hasData = burnRateData?.hasData ?? false;
@@ -23,6 +24,9 @@ export function TokenBurnRateChart({ burnRateData, loading }: TokenBurnRateChart
     const avgDailyUsage = burnRateData?.avgDailyUsage || 0;
     const isCritical = burnRateData?.isCritical || false;
     const isWarning = burnRateData?.isWarning || false;
+
+    // Touch interaction state
+    const { state, isActive } = useChartPressState({ x: 0, y: { y: 0 } });
 
     // Status info
     const getStatusInfo = () => {
@@ -49,8 +53,18 @@ export function TokenBurnRateChart({ burnRateData, loading }: TokenBurnRateChart
 
     const status = getStatusInfo();
 
-    // Format depletion date
-    const formatDepletionDate = (dateStr: string | null) => {
+    // Format date for display
+    const formatDate = (dateStr: string | null) => {
+        if (!dateStr) return '-';
+        try {
+            return format(new Date(dateStr), 'd MMM yyyy', { locale: idLocale });
+        } catch {
+            return dateStr;
+        }
+    };
+
+    // Format short date
+    const formatShortDate = (dateStr: string | null) => {
         if (!dateStr) return '-';
         try {
             return format(new Date(dateStr), 'd MMM', { locale: idLocale });
@@ -59,239 +73,226 @@ export function TokenBurnRateChart({ burnRateData, loading }: TokenBurnRateChart
         }
     };
 
+    // Prepare chart data
+    const getChartData = () => {
+        if (!projectionData || projectionData.length === 0) return [];
+
+        // Sample evenly for readability (max 15 points)
+        const chartPoints = projectionData.filter((_: unknown, i: number) =>
+            i === 0 ||
+            i === projectionData.length - 1 ||
+            i % Math.ceil(projectionData.length / 15) === 0
+        ).slice(0, 15);
+
+        return chartPoints.map((d, index) => ({
+            x: index,
+            y: d.kwhRemaining,
+            date: d.date,
+            daysFromNow: differenceInDays(new Date(d.date), new Date()),
+        }));
+    };
+
+    const chartData = getChartData();
+
+    // Get active tooltip data when user touches chart
+    const activeData = isActive && state.x.value !== undefined
+        ? chartData[Math.round(state.x.value.value)]
+        : null;
+
     if (loading) {
         return (
-            <View style={styles.card}>
-                <View style={styles.header}>
-                    <Text style={styles.title}>Proyeksi Token</Text>
+            <View className="bg-surface rounded-2xl p-4 mx-6 mb-3 border border-border">
+                <View className="mb-3">
+                    <Text className="text-base font-semibold text-slate-800">
+                        Proyeksi Token
+                    </Text>
                 </View>
-                <View style={styles.loadingContainer}>
-                    <Text style={styles.loadingText}>Memuat...</Text>
+                <View className="h-[200px] justify-center items-center">
+                    <Text className="text-slate-500">Memuat...</Text>
                 </View>
             </View>
         );
     }
 
-    if (!hasData || projectionData.length === 0) {
+    if (!hasData || chartData.length === 0) {
         return (
-            <View style={styles.card}>
-                <View style={styles.header}>
-                    <Text style={styles.title}>Proyeksi Token</Text>
-                    <Text style={styles.subtitle}>Berdasarkan rata-rata 30 hari</Text>
+            <View className="bg-surface rounded-2xl p-4 mx-6 mb-3 border border-border">
+                <View className="mb-3">
+                    <Text className="text-base font-semibold text-slate-800">
+                        Proyeksi Token
+                    </Text>
+                    <Text className="text-xs text-slate-500 mt-0.5">
+                        Berdasarkan rata-rata 30 hari
+                    </Text>
                 </View>
-                <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>Belum ada data token</Text>
-                    <Text style={styles.emptySubtext}>Tambahkan top-up untuk melihat proyeksi</Text>
+                <View className="h-[150px] justify-center items-center gap-1">
+                    <Text className="text-sm text-slate-500">Belum ada data token</Text>
+                    <Text className="text-xs text-slate-500 opacity-70">
+                        Tambahkan top-up untuk melihat proyeksi
+                    </Text>
                 </View>
             </View>
         );
     }
-
-    // Prepare chart data - take up to 15 points for readability
-    const chartPoints = projectionData.filter((_, i) =>
-        i === 0 || // Always include first
-        i === projectionData.length - 1 || // Always include last
-        i % Math.ceil(projectionData.length / 15) === 0 // Sample evenly
-    ).slice(0, 15);
-
-    const chartData = {
-        labels: chartPoints.map((d, i) => {
-            if (i === 0) return 'Hari Ini';
-            if (i === chartPoints.length - 1) return formatDepletionDate(d.date);
-            return '';
-        }),
-        datasets: [
-            {
-                data: chartPoints.map(d => d.kwhRemaining),
-                color: () => status.color,
-                strokeWidth: 2,
-            },
-        ],
-    };
-
-    const chartConfig = {
-        backgroundGradientFrom: colors.surface,
-        backgroundGradientTo: colors.surface,
-        decimalPlaces: 0,
-        color: () => status.color,
-        labelColor: () => colors.textSecondary,
-        propsForDots: {
-            r: '3',
-            strokeWidth: '1',
-            stroke: status.color,
-        },
-        propsForBackgroundLines: {
-            stroke: colors.border,
-            strokeDasharray: '4,4',
-        },
-        fillShadowGradient: status.color,
-        fillShadowGradientOpacity: 0.2,
-    };
 
     return (
-        <View style={styles.card}>
+        <View className="bg-surface rounded-2xl p-4 mx-6 mb-3 border border-border">
             {/* Header with Status */}
-            <View style={styles.headerRow}>
+            <View className="flex-row justify-between items-start mb-4">
                 <View>
-                    <Text style={styles.title}>Proyeksi Token</Text>
-                    <Text style={styles.subtitle}>Berdasarkan rata-rata 30 hari</Text>
+                    <Text className="text-base font-semibold text-slate-800">
+                        Proyeksi Token
+                    </Text>
+                    <Text className="text-xs text-slate-500 mt-0.5">
+                        Berdasarkan rata-rata 30 hari
+                    </Text>
                 </View>
-                <View style={[styles.statusBadge, { backgroundColor: status.bgColor }]}>
-                    <View style={[styles.statusDot, { backgroundColor: status.color }]} />
-                    <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
+                <View
+                    className="flex-row items-center gap-1.5 px-2.5 py-1 rounded-xl"
+                    style={{ backgroundColor: status.bgColor }}
+                >
+                    <View
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{ backgroundColor: status.color }}
+                    />
+                    <Text
+                        className="text-[11px] font-semibold"
+                        style={{ color: status.color }}
+                    >
+                        {status.label}
+                    </Text>
                 </View>
             </View>
 
             {/* Stats Row */}
-            <View style={styles.statsRow}>
-                <View style={styles.statItem}>
-                    <Text style={styles.statValue}>{remainingKwh.toFixed(1)}</Text>
-                    <Text style={styles.statLabel}>kWh tersisa</Text>
+            <View className="flex-row justify-between mb-3">
+                <View className="flex-1 items-center p-2.5 bg-white rounded-xl mx-1">
+                    <Text className="text-lg font-bold text-slate-800">
+                        {remainingKwh.toFixed(1)}
+                    </Text>
+                    <Text className="text-[10px] text-slate-500 mt-0.5">kWh tersisa</Text>
                 </View>
-                <View style={styles.statItem}>
-                    <Text style={[styles.statValue, { color: status.color }]}>
+                <View className="flex-1 items-center p-2.5 bg-white rounded-xl mx-1">
+                    <Text
+                        className="text-lg font-bold"
+                        style={{ color: status.color }}
+                    >
                         {daysRemaining !== null ? daysRemaining : '-'}
                     </Text>
-                    <Text style={styles.statLabel}>hari lagi</Text>
+                    <Text className="text-[10px] text-slate-500 mt-0.5">hari lagi</Text>
                 </View>
-                <View style={styles.statItem}>
-                    <Text style={styles.statValue}>{formatDepletionDate(depletionDate ?? null)}</Text>
-                    <Text style={styles.statLabel}>perkiraan habis</Text>
+                <View className="flex-1 items-center p-2.5 bg-white rounded-xl mx-1">
+                    <Text className="text-lg font-bold text-slate-800">
+                        {formatShortDate(depletionDate ?? null)}
+                    </Text>
+                    <Text className="text-[10px] text-slate-500 mt-0.5">perkiraan habis</Text>
                 </View>
             </View>
+
+            {/* Tooltip - shown when user touches chart */}
+            {activeData && isActive && (
+                <View className="bg-white rounded-xl p-3 mb-2 shadow-sm border border-slate-100">
+                    <View className="flex-row items-center gap-2 mb-2">
+                        <Text className="text-sm font-semibold text-slate-800">
+                            📅 {formatDate(activeData.date)}
+                        </Text>
+                    </View>
+                    <View className="flex-row justify-between">
+                        <View className="flex-1">
+                            <Text className="text-[10px] text-slate-500">Sisa Token</Text>
+                            <Text className="text-base font-bold" style={{ color: status.color }}>
+                                {activeData.y?.toFixed(1) || '0.0'} kWh
+                            </Text>
+                        </View>
+                        <View className="flex-1">
+                            <Text className="text-[10px] text-slate-500">Pemakaian/Hari</Text>
+                            <Text className="text-base font-bold text-slate-800">
+                                {avgDailyUsage.toFixed(2)} kWh
+                            </Text>
+                        </View>
+                        <View className="flex-1">
+                            <Text className="text-[10px] text-slate-500">Hari ke-</Text>
+                            <Text className="text-base font-bold text-slate-800">
+                                {activeData.daysFromNow > 0 ? `+${activeData.daysFromNow}` : activeData.daysFromNow}
+                            </Text>
+                        </View>
+                    </View>
+                </View>
+            )}
 
             {/* Chart */}
-            <View style={styles.chartContainer}>
-                <LineChart
-                    data={chartData}
-                    width={chartWidth}
-                    height={160}
-                    yAxisLabel=""
-                    yAxisSuffix=""
-                    chartConfig={chartConfig}
-                    style={styles.chart}
-                    bezier
-                    withDots={true}
-                    withShadow={true}
-                    fromZero
-                />
+            <View className="items-center my-2">
+                <View style={{ height: CHART_HEIGHT, width: screenWidth - 72 }}>
+                    <CartesianChart
+                        data={chartData}
+                        xKey="x"
+                        yKeys={["y"]}
+                        domainPadding={{ left: 10, right: 10, top: 20, bottom: 10 }}
+                        chartPressState={state}
+                    >
+                        {({ points }) => (
+                            <>
+                                <Area
+                                    points={points.y}
+                                    y0={CHART_HEIGHT}
+                                    color={status.color}
+                                    opacity={0.2}
+                                    curveType="natural"
+                                />
+                                <Line
+                                    points={points.y}
+                                    color={status.color}
+                                    strokeWidth={2}
+                                    curveType="natural"
+                                />
+                                {/* Active indicator dot */}
+                                {isActive && state.y.y.position && (
+                                    <Circle
+                                        cx={state.x.position.value}
+                                        cy={state.y.y.position.value}
+                                        r={6}
+                                        color={status.color}
+                                    />
+                                )}
+                                {/* Dots at endpoints */}
+                                {points.y
+                                    .filter((_: any, i: number) => i === 0 || i === points.y.length - 1)
+                                    .map((point: any, index: number) => {
+                                        if (point.y === undefined || point.y === null) return null;
+                                        return (
+                                            <Circle
+                                                key={index}
+                                                cx={point.x}
+                                                cy={point.y}
+                                                r={4}
+                                                color={status.color}
+                                            />
+                                        );
+                                    })}
+                            </>
+                        )}
+                    </CartesianChart>
+                </View>
+
+                {/* X-Axis Labels */}
+                <View className="flex-row justify-between w-full px-2 mt-1">
+                    <Text className="text-[10px] text-slate-400">Hari Ini</Text>
+                    <Text className="text-[10px] text-slate-400">
+                        {chartData.length > 0
+                            ? formatShortDate(chartData[chartData.length - 1].date)
+                            : ''}
+                    </Text>
+                </View>
             </View>
 
-            {/* Footer */}
-            <Text style={styles.footer}>
-                Rata-rata: <Text style={styles.footerBold}>{avgDailyUsage.toFixed(2)} kWh/hari</Text>
+            {/* Footer with touch hint */}
+            <Text className="text-[11px] text-slate-500 text-center mt-2">
+                Rata-rata:{' '}
+                <Text className="font-semibold text-slate-800">
+                    {avgDailyUsage.toFixed(2)} kWh/hari
+                </Text>
+                {' '}• Sentuh chart untuk detail
             </Text>
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    card: {
-        backgroundColor: colors.surface,
-        borderRadius: 16,
-        padding: 16,
-        marginHorizontal: 24,
-        marginBottom: 12,
-        borderWidth: 1,
-        borderColor: colors.border,
-    },
-    header: {
-        marginBottom: 12,
-    },
-    headerRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: 16,
-    },
-    title: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: colors.text,
-    },
-    subtitle: {
-        fontSize: 12,
-        color: colors.textSecondary,
-        marginTop: 2,
-    },
-    statusBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    statusDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-    },
-    statusText: {
-        fontSize: 11,
-        fontWeight: '600',
-    },
-    statsRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 12,
-    },
-    statItem: {
-        flex: 1,
-        alignItems: 'center',
-        padding: 10,
-        backgroundColor: colors.background,
-        borderRadius: 12,
-        marginHorizontal: 4,
-    },
-    statValue: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: colors.text,
-    },
-    statLabel: {
-        fontSize: 10,
-        color: colors.textSecondary,
-        marginTop: 2,
-    },
-    chartContainer: {
-        alignItems: 'center',
-        marginVertical: 8,
-    },
-    chart: {
-        borderRadius: 8,
-    },
-    footer: {
-        fontSize: 11,
-        color: colors.textSecondary,
-        textAlign: 'center',
-        marginTop: 8,
-    },
-    footerBold: {
-        fontWeight: '600',
-        color: colors.text,
-    },
-    loadingContainer: {
-        height: 200,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    loadingText: {
-        color: colors.textSecondary,
-    },
-    emptyContainer: {
-        height: 150,
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 4,
-    },
-    emptyText: {
-        fontSize: 14,
-        color: colors.textSecondary,
-    },
-    emptySubtext: {
-        fontSize: 12,
-        color: colors.textSecondary,
-        opacity: 0.7,
-    },
-});

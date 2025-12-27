@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors } from '@/constants/colors';
@@ -11,12 +11,13 @@ import {
     GlobalFilterBar,
     TotalUsageCard,
     EstCostCard,
-    TokenPredictionCard,
     TokenBalanceChart,
     UsageAlert,
     RecentReadingsList,
     EfficiencyScoreCard,
     TokenBurnRateChart,
+    SectionHeader,
+    AnimatedCard,
 } from '@/components/dashboard';
 
 // Analytics Utils
@@ -25,7 +26,6 @@ import {
     computeDailyUsage,
     aggregateWeekly,
     aggregateMonthly,
-    calculateTokenPrediction,
     prepareChartData,
     filterByTimeRange,
     calculateBurnRateProjection,
@@ -87,12 +87,11 @@ export default function DashboardScreen() {
         setRefreshing(false);
     }, [fetchReadings, fetchSettings]);
 
-    // Compute basic analytics data
-    // Use 60 days for trend comparisons
-    const dailyUsage = computeDailyUsage(readings, 60);
+    // Compute basic analytics data (memoized)
+    const dailyUsage = useMemo(() => computeDailyUsage(readings, 180), [readings]);
 
-    // Calculate Trend Percentage
-    const calculateTrend = () => {
+    // Calculate Trend Percentage based on current filter
+    const trendPercentage = useMemo(() => {
         if (dailyUsage.length === 0) return 0;
 
         let currentSum = 0;
@@ -102,9 +101,7 @@ export default function DashboardScreen() {
         const sorted = [...dailyUsage].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
         if (filter === 'day') {
-            // Compare last 7 days vs previous 7 days (as per reference logic for 'Day' filter view which shows 7 days)
-            // Wait, reference says: "Day: shows 7 days".
-            // So current period = last 7 days. Previous period = 7 days before that.
+            // Compare last 7 days vs previous 7 days
             const currentPeriod = sorted.slice(0, 7);
             const previousPeriod = sorted.slice(7, 14);
             currentSum = currentPeriod.reduce((acc, d) => acc + d.usage, 0);
@@ -116,37 +113,25 @@ export default function DashboardScreen() {
             currentSum = currentPeriod.reduce((acc, d) => acc + d.usage, 0);
             previousSum = previousPeriod.reduce((acc, d) => acc + d.usage, 0);
         } else if (filter === 'month') {
-            // Compare last 30 days (appr 1 month) vs previous 30 days
-            // Or compare this month vs last month strict?
-            // Reference usually compares 30-day windows for simplicity in rolling analytics
-            const currentPeriod = sorted.slice(0, 30);
-            const previousPeriod = sorted.slice(30, 60);
+            // Compare last 6 months worth of data vs previous 6 months
+            const currentPeriod = sorted.slice(0, 180);
+            const previousPeriod = sorted.slice(180, 360);
             currentSum = currentPeriod.reduce((acc, d) => acc + d.usage, 0);
             previousSum = previousPeriod.reduce((acc, d) => acc + d.usage, 0);
         }
 
         if (previousSum === 0) return 0;
         return ((currentSum - previousSum) / previousSum) * 100;
-    };
+    }, [dailyUsage, filter]);
 
-    const trendPercentage = calculateTrend();
+    // Prepare chart data based on filter (memoized)
+    const chartData = useMemo(() => prepareChartData(dailyUsage, filter), [dailyUsage, filter]);
 
-    // Prepare chart data based on filter
-    // Note: filterByTimeRange might need adjustment if we changed the meaning of 'day'/'week'/'month'
-    // Reference:
-    // Day -> Last 7 Days
-    // Week -> Last 4 Weeks (aggregated or daily?) -> Reference says "4 weeks aggregated" usually means weekly bars?
-    // Let's check prepareChartData in analytics.ts.
-    // It handles the slicing. We just pass dailyUsage.
-
-    const chartData = prepareChartData(dailyUsage, filter);
-
-    // Calculate total usage for display
-    // Must match the chart data range
-    const totalUsage = chartData.reduce((sum, d) => sum + (d.y || 0), 0);
+    // Calculate total usage for display - must match the chart data
+    const totalUsage = useMemo(() => chartData.reduce((sum, d) => sum + (d.y || 0), 0), [chartData]);
 
     // Advanced Analytics
-    const tokenPrediction = calculateTokenPrediction(readings);
+
     const burnRateProjection = calculateBurnRateProjection(readings);
     const efficiencyScore = calculateEfficiencyScore(readings, {
         monthlyBudget: settings.monthlyBudget,
@@ -200,53 +185,68 @@ export default function DashboardScreen() {
                 />
             )}
 
-            {/* 1. Total Usage Card */}
-            <TotalUsageCard
-                totalKwh={totalUsage}
-                trendPercentage={Number(trendPercentage.toFixed(1))}
-                data={chartData}
-                filter={filter}
-                loading={loading}
-            />
+            {/* ========== SECTION: RINGKASAN ========== */}
+            <SectionHeader emoji="📊" title="Ringkasan" />
 
-            {/* 2. Efficiency Score Card */}
-            <EfficiencyScoreCard
-                score={efficiencyScore}
-                hasData={efficiencyScore.hasData}
-                loading={loading}
-            />
+            {/* 1. Total Usage Card - Hero metric */}
+            <AnimatedCard delay={0}>
+                <TotalUsageCard
+                    totalKwh={totalUsage}
+                    trendPercentage={Number(trendPercentage.toFixed(1))}
+                    data={chartData}
+                    filter={filter}
+                    loading={loading}
+                />
+            </AnimatedCard>
 
-            {/* 3. Estimated Cost Card */}
-            <EstCostCard
-                estimatedCost={estimatedCost}
-                budgetMonthly={budgetForPeriod}
-                alertThreshold={alertThreshold}
-                loading={loading}
-            />
+            {/* 2. Estimated Cost Card - Cost context */}
+            <AnimatedCard delay={50}>
+                <EstCostCard
+                    estimatedCost={estimatedCost}
+                    budgetMonthly={budgetForPeriod}
+                    alertThreshold={alertThreshold}
+                    loading={loading}
+                />
+            </AnimatedCard>
+
+            {/* 3. Efficiency Score Card - Insight */}
+            <AnimatedCard delay={100}>
+                <EfficiencyScoreCard
+                    score={efficiencyScore}
+                    hasData={efficiencyScore.hasData}
+                    loading={loading}
+                />
+            </AnimatedCard>
+
+            {/* ========== SECTION: PROYEKSI TOKEN ========== */}
+            <SectionHeader emoji="⚡" title="Proyeksi Token" subtitle="Berdasarkan rata-rata 30 hari" />
 
             {/* 4. Token Burn Rate Chart (Area Chart) */}
-            <TokenBurnRateChart
-                burnRateData={burnRateProjection}
-                loading={loading}
-            />
+            <AnimatedCard delay={150}>
+                <TokenBurnRateChart
+                    burnRateData={burnRateProjection}
+                    loading={loading}
+                />
+            </AnimatedCard>
 
-            {/* 5. Token Prediction Card (Simple Stats) - Optional/Complementary */}
-            <TokenPredictionCard
-                prediction={tokenPrediction}
-                loading={loading}
-            />
+            {/* 5. Token Balance History Chart */}
+            <AnimatedCard delay={200}>
+                <TokenBalanceChart
+                    dailyData={dailyUsage}
+                    loading={loading}
+                />
+            </AnimatedCard>
 
-            {/* 6. Token Balance History Chart */}
-            <TokenBalanceChart
-                dailyData={dailyUsage}
-                loading={loading}
-            />
+            {/* ========== SECTION: RIWAYAT ========== */}
+            <SectionHeader emoji="📋" title="Riwayat" subtitle="Catatan terbaru Anda" />
 
-            {/* 7. Recent Readings List */}
-            <RecentReadingsList
-                readings={readings}
-                loading={loading}
-            />
+            {/* 6. Recent Readings List */}
+            <AnimatedCard delay={250}>
+                <RecentReadingsList
+                    readings={readings}
+                    loading={loading}
+                />
+            </AnimatedCard>
         </ScrollView>
     );
 }
@@ -271,3 +271,4 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
 });
+

@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import { BarChart } from 'react-native-chart-kit';
+import { View, Text, Dimensions } from 'react-native';
+import { CartesianChart, Bar, useChartPressState } from 'victory-native';
 import { TrendingUp, TrendingDown } from 'lucide-react-native';
+import { Circle } from '@shopify/react-native-skia';
 import { colors } from '@/constants/colors';
 import { ChartDataPoint } from '@/shared/utils/analytics';
 
@@ -14,10 +15,12 @@ interface TotalUsageCardProps {
 }
 
 const screenWidth = Dimensions.get('window').width;
-const chartWidth = screenWidth - 72;
+const CHART_HEIGHT = 150;
+const CHART_WIDTH = screenWidth - 72;
 
 export function TotalUsageCard({ totalKwh, trendPercentage, data, filter, loading }: TotalUsageCardProps) {
     const isPositive = trendPercentage >= 0;
+    const { state, isActive } = useChartPressState({ x: 0, y: { y: 0 } });
 
     const getRangeTitle = () => {
         switch (filter) {
@@ -28,206 +31,145 @@ export function TotalUsageCard({ totalKwh, trendPercentage, data, filter, loadin
         }
     };
 
-    const chartConfig = {
-        backgroundGradientFrom: colors.surface,
-        backgroundGradientTo: colors.surface,
-        decimalPlaces: 1,
-        color: (opacity = 1) => colors.reading,
-        labelColor: (opacity = 1) => colors.textSecondary,
-        barPercentage: 0.7,
-        propsForBackgroundLines: {
-            stroke: colors.border,
-            strokeDasharray: '4,4',
-        },
-        fillShadowGradient: colors.reading,
-        fillShadowGradientOpacity: 1,
-    };
+    // Prepare chart data for Victory Native
+    const chartData = data.map((d, index) => ({
+        x: index,
+        y: typeof d.y === 'number' && !isNaN(d.y) ? Math.max(d.y, 0.1) : 0.1,
+        label: String(d.x),
+        originalY: d.y,
+    }));
 
-    // Prepare styles for bar colors manually since chart-kit doesn't support individual bar colors well in all versions
-    // But we can try to use the color function if we pass data correctly.
-    // For simplicity and stability with chart-kit, we'll use a single color but we can try to customize if needed.
-    // The reference uses green for last bar, blue for topup. 
-    // react-native-chart-kit basic BarChart doesn't support individual bar colors easily without hacks.
-    // We will stick to a clean single color for now, or use `withCustomBarColorFromData` if we have the specific fork.
-    // Assuming standard library, stick to single color.
+    const barWidth = Math.max(16, Math.floor((CHART_WIDTH - 80) / Math.max(chartData.length, 1)));
 
-    const chartData = {
-        labels: data.map(d => String(d.x)),
-        datasets: [
-            {
-                data: data.map(d => d.y),
-            }
-        ],
-    };
+    // Get active tooltip data when user taps on chart
+    const activeData = isActive && state.x.value !== undefined
+        ? chartData[Math.round(state.x.value.value)]
+        : null;
 
     if (loading) {
         return (
-            <View style={styles.card}>
-                <View style={styles.header}>
-                    <Text style={styles.title}>Total Penggunaan</Text>
+            <View className="bg-surface rounded-2xl p-4 mx-6 mb-3 border border-border">
+                <View className="mb-4">
+                    <Text className="text-base font-semibold text-slate-800">
+                        Total Penggunaan
+                    </Text>
                 </View>
-                <View style={styles.loadingContainer}>
-                    <Text style={styles.loadingText}>Memuat...</Text>
+                <View className="h-[180px] justify-center items-center">
+                    <Text className="text-slate-500">Memuat...</Text>
                 </View>
             </View>
         );
     }
 
     return (
-        <View style={styles.card}>
+        <View className="bg-surface rounded-2xl p-4 mx-6 mb-3 border border-border">
             {/* Header */}
-            <View style={styles.header}>
-                <View style={styles.headerTop}>
+            <View className="mb-4">
+                <View className="flex-row justify-between items-start mb-2">
                     <View>
-                        <Text style={styles.headerLabel}>TOTAL PENGGUNAAN</Text>
-                        <View style={styles.valueRow}>
-                            <Text style={styles.totalValue}>{totalKwh !== undefined ? totalKwh.toFixed(1) : '-'}</Text>
-                            <Text style={styles.unit}>kWh</Text>
+                        <Text className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">
+                            TOTAL PENGGUNAAN
+                        </Text>
+                        <View className="flex-row items-baseline gap-1">
+                            <Text className="text-[28px] font-bold text-slate-800">
+                                {totalKwh !== undefined ? totalKwh.toFixed(1) : '-'}
+                            </Text>
+                            <Text className="text-sm font-medium text-slate-500">kWh</Text>
                         </View>
                     </View>
 
                     {/* Trend Badge */}
-                    <View style={[
-                        styles.trendBadge,
-                        { backgroundColor: isPositive ? `${colors.success}15` : `${colors.error}15` }
-                    ]}>
+                    <View
+                        className="flex-row items-center gap-1 px-2 py-1 rounded-xl"
+                        style={{ backgroundColor: isPositive ? `${colors.success}15` : `${colors.error}15` }}
+                    >
                         {isPositive ? (
                             <TrendingUp size={12} color={colors.success} />
                         ) : (
                             <TrendingDown size={12} color={colors.error} />
                         )}
-                        <Text style={[
-                            styles.trendText,
-                            { color: isPositive ? colors.success : colors.error }
-                        ]}>
+                        <Text
+                            className="text-xs font-bold"
+                            style={{ color: isPositive ? colors.success : colors.error }}
+                        >
                             {Math.abs(trendPercentage)}%
                         </Text>
                     </View>
                 </View>
 
                 {/* Range Badge */}
-                <View style={styles.rangeBadge}>
-                    <Text style={styles.rangeText}>{getRangeTitle()}</Text>
+                <View className="self-start bg-white px-2 py-1 rounded-lg">
+                    <Text className="text-[10px] text-slate-500">{getRangeTitle()}</Text>
                 </View>
             </View>
 
+            {/* Tooltip - shown when user taps on chart */}
+            {activeData && isActive && (
+                <View className="bg-white rounded-lg p-2 mb-2 shadow-sm border border-slate-100">
+                    <Text className="text-sm font-semibold text-slate-800">{activeData.label}</Text>
+                    <Text className="text-lg font-bold" style={{ color: colors.reading }}>
+                        {activeData.originalY?.toFixed(2) || '0.00'} kWh
+                    </Text>
+                    <Text className="text-[10px] text-slate-400">
+                        Konsumsi didistribusikan merata per hari
+                    </Text>
+                </View>
+            )}
+
             {/* Chart */}
-            {data && data.length > 0 ? (
-                <View style={styles.chartContainer}>
-                    <BarChart
-                        data={chartData}
-                        width={chartWidth}
-                        height={180}
-                        yAxisLabel=""
-                        yAxisSuffix=""
-                        chartConfig={chartConfig}
-                        style={styles.chart}
-                        fromZero
-                        showValuesOnTopOfBars={filter === 'day'}
-                        withInnerLines={true}
-                    />
+            {data && data.length > 0 && chartData.length > 0 ? (
+                <View>
+                    {/* Chart Area */}
+                    <View style={{ height: CHART_HEIGHT, width: CHART_WIDTH }}>
+                        <CartesianChart
+                            data={chartData}
+                            xKey="x"
+                            yKeys={["y"]}
+                            domainPadding={{ left: 20, right: 20, top: 10, bottom: 0 }}
+                            chartPressState={state}
+                        >
+                            {({ points, chartBounds }) => (
+                                <>
+                                    <Bar
+                                        points={points.y}
+                                        chartBounds={chartBounds}
+                                        color={colors.reading}
+                                        barWidth={barWidth}
+                                        roundedCorners={{ topLeft: 4, topRight: 4 }}
+                                    />
+                                    {/* Active indicator dot */}
+                                    {isActive && state.y.y.position && (
+                                        <Circle
+                                            cx={state.x.position.value}
+                                            cy={state.y.y.position.value}
+                                            r={5}
+                                            color={colors.primary[500]}
+                                        />
+                                    )}
+                                </>
+                            )}
+                        </CartesianChart>
+                    </View>
+
+                    {/* Custom X-Axis Labels */}
+                    <View className="flex-row justify-around mt-2 px-2">
+                        {chartData.map((d, index) => (
+                            <Text
+                                key={index}
+                                className="text-[8px] text-slate-500 text-center"
+                                style={{ flex: 1 }}
+                                numberOfLines={1}
+                            >
+                                {d.label}
+                            </Text>
+                        ))}
+                    </View>
                 </View>
             ) : (
-                <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>Belum ada data</Text>
+                <View className="h-[120px] justify-center items-center">
+                    <Text className="text-sm text-slate-500">Belum ada data</Text>
                 </View>
             )}
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    card: {
-        backgroundColor: colors.surface,
-        borderRadius: 16,
-        padding: 16,
-        marginHorizontal: 24,
-        marginBottom: 12,
-        borderWidth: 1,
-        borderColor: colors.border,
-    },
-    header: {
-        marginBottom: 16,
-    },
-    headerTop: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: 8,
-    },
-    headerLabel: {
-        fontSize: 10,
-        fontWeight: '600',
-        color: colors.textSecondary,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-        marginBottom: 4,
-    },
-    title: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: colors.text,
-    },
-    valueRow: {
-        flexDirection: 'row',
-        alignItems: 'baseline',
-        gap: 4,
-    },
-    totalValue: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: colors.text,
-    },
-    unit: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: colors.textSecondary,
-    },
-    trendBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    trendText: {
-        fontSize: 12,
-        fontWeight: 'bold',
-    },
-    rangeBadge: {
-        alignSelf: 'flex-start',
-        backgroundColor: colors.background,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
-    },
-    rangeText: {
-        fontSize: 10,
-        color: colors.textSecondary,
-    },
-    chartContainer: {
-        alignItems: 'center',
-    },
-    chart: {
-        borderRadius: 8,
-        paddingRight: 0,
-    },
-    loadingContainer: {
-        height: 180,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    loadingText: {
-        color: colors.textSecondary,
-    },
-    emptyContainer: {
-        height: 120,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    emptyText: {
-        color: colors.textSecondary,
-        fontSize: 14,
-    },
-});

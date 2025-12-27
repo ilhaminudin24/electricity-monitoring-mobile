@@ -2,10 +2,10 @@ import React from 'react';
 import {
     TouchableOpacity,
     Text,
-    StyleSheet,
     ActivityIndicator,
     ViewStyle,
     TextStyle,
+    View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '@/constants/colors';
@@ -19,6 +19,7 @@ interface GradientButtonProps {
     style?: ViewStyle;
     textStyle?: TextStyle;
     icon?: React.ReactNode;
+    className?: string;
 }
 
 export function GradientButton({
@@ -30,6 +31,7 @@ export function GradientButton({
     style,
     textStyle,
     icon,
+    className = '',
 }: GradientButtonProps) {
     const gradientColors = getGradientColors(variant);
     const isDisabled = disabled || loading;
@@ -39,20 +41,26 @@ export function GradientButton({
             onPress={onPress}
             disabled={isDisabled}
             activeOpacity={0.8}
-            style={[styles.button, isDisabled && styles.buttonDisabled, style]}
+            className={`rounded-xl overflow-hidden shadow-md ${isDisabled ? 'opacity-70' : ''} ${className}`}
+            style={style}
         >
             <LinearGradient
                 colors={isDisabled ? ['#94A3B8', '#64748B'] : gradientColors}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                style={styles.gradient}
+                className="flex-row items-center justify-center py-4 px-6 gap-2"
             >
                 {loading ? (
                     <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
                     <>
                         {icon}
-                        <Text style={[styles.text, textStyle]}>{title}</Text>
+                        <Text
+                            className="text-base font-semibold text-white"
+                            style={textStyle}
+                        >
+                            {title}
+                        </Text>
                     </>
                 )}
             </LinearGradient>
@@ -73,33 +81,3 @@ function getGradientColors(variant: string): [string, string] {
             return [colors.primary[500], colors.primary[700]];
     }
 }
-
-const styles = StyleSheet.create({
-    button: {
-        borderRadius: 12,
-        overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    buttonDisabled: {
-        opacity: 0.7,
-        shadowOpacity: 0,
-        elevation: 0,
-    },
-    gradient: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 16,
-        paddingHorizontal: 24,
-        gap: 8,
-    },
-    text: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#FFFFFF',
-    },
-});

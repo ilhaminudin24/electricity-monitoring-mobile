@@ -2,14 +2,13 @@ import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
-    StyleSheet,
     ScrollView,
     TouchableOpacity,
     Platform,
     Alert,
     TextInput,
 } from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Calendar, Zap, FileText, Save, TrendingUp, Wallet } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 import { Input } from '@/components/ui/Input';
@@ -17,8 +16,19 @@ import { GlassCard } from '@/components/ui/GlassCard';
 import { GradientButton } from '@/components/ui/GradientButton';
 import { PhotoCapture } from './PhotoCapture';
 import { useAuth } from '@/contexts/AuthContext';
-import { getLastReading, getLastReadingBeforeDate, addReading, updateReading, checkReadingExists, deleteReading } from '@/lib/readingService';
-import { getSettings, loadSettings } from '@/shared/utils/settings';
+import { getLastReadingBeforeDate, addReading, updateReading, checkReadingExists, deleteReading, getReadingsAfterDate, bulkUpdateReadingsKwh } from '@/lib/readingService';
+import {
+    checkForBackdate,
+    validateBackdateOperation,
+    previewBackdateImpact,
+    addEvent,
+    performCascadingRecalculation,
+    EVENT_TYPES,
+    TRIGGER_TYPES,
+    BackdatePreview,
+    ValidationIssue,
+} from '@/shared/services/eventService';
+import { loadSettings } from '@/shared/utils/settings';
 import { calculateTokenAmount } from '@/shared/utils/tariff';
 import { formatDate, formatDateForApi } from '@/shared/utils/date';
 import { formatRupiah, formatRupiahInput, parseRupiah, formatKwh } from '@/shared/utils/rupiah';
@@ -27,6 +37,13 @@ import { router } from 'expo-router';
 
 interface TopUpFormProps {
     onDuplicateDate?: (existingReading: Reading, formData?: ReadingInput, photoUri?: string | null) => void;
+    onBackdateDetected?: (
+        affectedEvents: BackdatePreview[],
+        validationIssues: ValidationIssue[],
+        kwhOffset: number,
+        formData: ReadingInput,
+        photoUri?: string | null
+    ) => void;
     editingReading?: Reading | null;
     onEditComplete?: () => void;
     replacingReadingId?: string | null;
@@ -35,6 +52,7 @@ interface TopUpFormProps {
 
 export function TopUpForm({
     onDuplicateDate,
+    onBackdateDetected,
     editingReading,
     onEditComplete,
     replacingReadingId,
@@ -52,12 +70,13 @@ export function TopUpForm({
     const [lastReading, setLastReading] = useState<Reading | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    // Load settings on mount
-    useEffect(() => {
-        loadSettings();
-    }, []);
+    // Date constraints: max = today, min = 30 days ago
+    const maxDate = new Date();
+    const minDate = new Date();
+    minDate.setDate(minDate.getDate() - 30);
 
-    // Fetch last reading before selected date (date-aware validation)
+    useEffect(() => { loadSettings(); }, []);
+
     useEffect(() => {
         const fetchPreviousReading = async () => {
             if (user?.id) {
@@ -68,17 +87,16 @@ export function TopUpForm({
         fetchPreviousReading();
     }, [user?.id, date]);
 
-    // Calculate kWh when token cost changes
     useEffect(() => {
         const calculate = async () => {
             const costNum = parseRupiah(tokenCost);
             if (costNum > 0) {
                 const kwh = await calculateTokenAmount(costNum);
                 setCalculatedKwh(kwh);
-
-                // Smart pre-fill: lastReading + calculatedKwh
-                if (kwh && lastReading) {
-                    const newReading = lastReading.kwh_value + kwh;
+                if (kwh !== null) {
+                    // lastReading bisa null untuk user baru, gunakan 0 sebagai default
+                    const previousKwh = lastReading?.kwh_value ?? 0;
+                    const newReading = previousKwh + kwh;
                     setNewKwhValue(newReading.toFixed(2));
                 }
             } else {
@@ -89,7 +107,6 @@ export function TopUpForm({
         calculate();
     }, [tokenCost, lastReading]);
 
-    // Handle editing mode - pre-fill form with existing data
     useEffect(() => {
         if (editingReading) {
             setDate(new Date(editingReading.date));
@@ -101,7 +118,6 @@ export function TopUpForm({
         }
     }, [editingReading]);
 
-    // Reset form to initial state
     const resetForm = () => {
         setDate(new Date());
         setTokenCost('');
@@ -114,22 +130,23 @@ export function TopUpForm({
 
     const handleDateChange = (event: any, selectedDate?: Date) => {
         setShowDatePicker(Platform.OS === 'ios');
-        if (selectedDate) {
-            setDate(selectedDate);
-        }
+        if (selectedDate) setDate(selectedDate);
     };
 
     const handleWebDateChange = (dateString: string) => {
         if (dateString) {
             const newDate = new Date(dateString + 'T00:00:00');
-            if (!isNaN(newDate.getTime())) {
+            if (!isNaN(newDate.getTime()) && newDate >= minDate && newDate <= maxDate) {
                 setDate(newDate);
+            } else if (!isNaN(newDate.getTime())) {
+                // Clamp to valid range
+                if (newDate > maxDate) setDate(maxDate);
+                else if (newDate < minDate) setDate(minDate);
             }
         }
     };
 
     const handleTokenCostChange = (text: string) => {
-        // Allow only numbers
         const cleaned = text.replace(/[^\d]/g, '');
         if (cleaned) {
             setTokenCost(formatRupiahInput(parseInt(cleaned, 10)));
@@ -140,131 +157,102 @@ export function TopUpForm({
 
     const validateForm = (): boolean => {
         const costNum = parseRupiah(tokenCost);
-        if (costNum <= 0) {
-            setError('Masukkan nominal token');
-            return false;
-        }
-
-        if (!newKwhValue.trim()) {
-            setError('Masukkan nilai kWh baru');
-            return false;
-        }
-
+        if (costNum <= 0) { setError('Masukkan nominal token'); return false; }
+        if (!newKwhValue.trim()) { setError('Masukkan nilai kWh baru'); return false; }
         const kwhNum = parseFloat(newKwhValue);
-        if (isNaN(kwhNum) || kwhNum < 0) {
-            setError('Nilai kWh tidak valid');
-            return false;
-        }
-
-        // Check if new reading is less than last (should be higher after top-up)
+        if (isNaN(kwhNum) || kwhNum < 0) { setError('Nilai kWh tidak valid'); return false; }
         if (lastReading && kwhNum < lastReading.kwh_value) {
             setError('Nilai kWh setelah top-up harus lebih tinggi dari pembacaan terakhir');
             return false;
         }
-
         setError(null);
         return true;
     };
 
     const handleSubmit = async () => {
         if (!validateForm() || !user?.id) return;
-
         setLoading(true);
         setError(null);
 
         try {
             const costNum = parseRupiah(tokenCost);
 
-            // If we're editing an existing reading
             if (editingReading) {
                 await updateReading(editingReading.id, {
-                    date: formatDateForApi(date),
-                    kwh: parseFloat(newKwhValue),
-                    token_cost: costNum,
-                    token_amount: calculatedKwh,
-                    notes: notes.trim() || null,
+                    date: formatDateForApi(date), kwh: parseFloat(newKwhValue),
+                    token_cost: costNum, token_amount: calculatedKwh, notes: notes.trim() || null,
                 });
-
                 Alert.alert('Berhasil', 'Top-up token berhasil diupdate!', [
-                    {
-                        text: 'OK', onPress: () => {
-                            resetForm();
-                            onEditComplete?.();
-                            router.replace('/(tabs)');
-                        }
-                    }
+                    { text: 'OK', onPress: () => { resetForm(); onEditComplete?.(); router.replace('/(tabs)'); } }
                 ]);
                 return;
             }
 
-            // If we're replacing an existing reading
             if (replacingReadingId) {
-                // Delete the old reading first
                 await deleteReading(replacingReadingId);
-
-                // Then add the new one
-                await addReading(
-                    user.id,
-                    {
-                        date: formatDateForApi(date),
-                        kwh: parseFloat(newKwhValue),
-                        token_cost: costNum,
-                        token_amount: calculatedKwh,
-                        notes: notes.trim() || null,
-                    },
-                    photoUri
-                );
-
+                await addReading(user.id, {
+                    date: formatDateForApi(date), kwh: parseFloat(newKwhValue),
+                    token_cost: costNum, token_amount: calculatedKwh, notes: notes.trim() || null,
+                }, photoUri);
                 Alert.alert('Berhasil', 'Data lama berhasil diganti dengan data baru!', [
-                    {
-                        text: 'OK', onPress: () => {
-                            resetForm();
-                            onReplaceComplete?.();
-                            router.replace('/(tabs)');
-                        }
-                    }
+                    { text: 'OK', onPress: () => { resetForm(); onReplaceComplete?.(); router.replace('/(tabs)'); } }
                 ]);
                 return;
             }
 
-            // Normal flow - check for duplicate date
             const existing = await checkReadingExists(user.id, date);
             if (existing) {
                 setLoading(false);
                 if (onDuplicateDate) {
-                    // Pass form data for direct save on replace
                     const formData: ReadingInput = {
-                        date: formatDateForApi(date),
-                        kwh: parseFloat(newKwhValue),
-                        token_cost: costNum,
-                        token_amount: calculatedKwh,
-                        notes: notes.trim() || null,
+                        date: formatDateForApi(date), kwh: parseFloat(newKwhValue),
+                        token_cost: costNum, token_amount: calculatedKwh, notes: notes.trim() || null,
                     };
                     onDuplicateDate(existing, formData, photoUri);
                 }
                 return;
             }
 
-            // Add reading with token info
-            await addReading(
-                user.id,
-                {
+            // Check for backdate recalculation using Event Sourcing
+            const purchasedKwh = calculatedKwh || parseFloat(newKwhValue) - (lastReading?.kwh_value || 0);
+            const backdateCheck = await checkForBackdate(user.id, formatDateForApi(date));
+
+            if (backdateCheck.isBackdate && onBackdateDetected) {
+                // Validate if backdate would cause issues
+                const validation = await validateBackdateOperation(
+                    user.id,
+                    formatDateForApi(date),
+                    purchasedKwh
+                );
+
+                // Preview the impact
+                const preview = await previewBackdateImpact(
+                    user.id,
+                    formatDateForApi(date),
+                    purchasedKwh
+                );
+
+                // DO NOT save yet - wait for user confirmation
+                setLoading(false);
+                const formData: ReadingInput = {
                     date: formatDateForApi(date),
                     kwh: parseFloat(newKwhValue),
                     token_cost: costNum,
                     token_amount: calculatedKwh,
                     notes: notes.trim() || null,
-                },
-                photoUri
-            );
+                };
+                onBackdateDetected(preview, validation.issues, purchasedKwh, formData, photoUri);
+                return;
+            }
+
+            // No backdate detected - safe to save directly
+            await addReading(user.id, {
+                date: formatDateForApi(date), kwh: parseFloat(newKwhValue),
+                token_cost: costNum, token_amount: calculatedKwh, notes: notes.trim() || null,
+            }, photoUri);
 
             Alert.alert('Berhasil', 'Top-up token berhasil disimpan!', [
-                {
-                    text: 'OK', onPress: () => {
-                        resetForm();
-                        router.replace('/(tabs)');
-                    }
-                }
+                { text: 'OK', onPress: () => { resetForm(); router.replace('/(tabs)'); } }
             ]);
         } catch (err: any) {
             setError(err.message || 'Gagal menyimpan top-up');
@@ -276,31 +264,31 @@ export function TopUpForm({
     const costNum = parseRupiah(tokenCost);
 
     return (
-        <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <ScrollView className="flex-1 p-4" showsVerticalScrollIndicator={false}>
             <GlassCard variant="topup">
-                <Text style={styles.cardTitle}>Top Up Token Listrik</Text>
+                <Text className="text-lg font-semibold text-slate-800 mb-5">Top Up Token Listrik</Text>
 
                 {/* Date Picker */}
-                <View style={styles.dateContainer}>
-                    <Text style={styles.label}>Tanggal Top Up</Text>
+                <View className="mb-4">
+                    <Text className="text-sm font-medium text-slate-800 mb-1.5">Tanggal Top Up</Text>
                     {Platform.OS === 'web' ? (
-                        <View style={[styles.dateButton, { borderColor: colors.topup + '50' }]}>
+                        <View className="flex-row items-center gap-3 p-3.5 bg-white border border-topup/30 rounded-xl">
                             <Calendar size={20} color={colors.topup} />
                             <TextInput
                                 value={date && !isNaN(date.getTime()) ? date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
-                                onChangeText={(text) => handleWebDateChange(text)}
-                                style={styles.webDateInput}
+                                onChangeText={handleWebDateChange}
+                                className="flex-1 text-base text-slate-800"
                                 placeholder="YYYY-MM-DD"
                             />
                         </View>
                     ) : (
                         <>
                             <TouchableOpacity
-                                style={[styles.dateButton, { borderColor: colors.topup + '50' }]}
+                                className="flex-row items-center gap-3 p-3.5 bg-white border border-topup/30 rounded-xl"
                                 onPress={() => setShowDatePicker(true)}
                             >
                                 <Calendar size={20} color={colors.topup} />
-                                <Text style={styles.dateText}>{formatDate(date, 'EEEE, d MMMM yyyy')}</Text>
+                                <Text className="text-base text-slate-800">{formatDate(date, 'EEEE, d MMMM yyyy')}</Text>
                             </TouchableOpacity>
                             {showDatePicker && (
                                 <DateTimePicker
@@ -308,6 +296,8 @@ export function TopUpForm({
                                     mode="date"
                                     display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                                     onChange={handleDateChange}
+                                    maximumDate={maxDate}
+                                    minimumDate={minDate}
                                 />
                             )}
                         </>
@@ -327,33 +317,31 @@ export function TopUpForm({
 
                 {/* Smart Pre-fill Preview */}
                 {calculatedKwh !== null && costNum > 0 && (
-                    <GlassCard variant="topup" style={styles.previewCard}>
-                        <View style={styles.previewHeader}>
+                    <GlassCard variant="topup" className="mb-4 bg-amber-50">
+                        <View className="flex-row items-center gap-2 mb-3">
                             <TrendingUp size={20} color={colors.topup} />
-                            <Text style={styles.previewTitle}>Smart Pre-fill</Text>
+                            <Text className="text-sm font-semibold text-topup">Smart Pre-fill</Text>
                         </View>
 
-                        <View style={styles.previewContent}>
-                            <View style={styles.previewRow}>
-                                <Text style={styles.previewLabel}>Nominal Token</Text>
-                                <Text style={styles.previewValue}>{formatRupiah(costNum)}</Text>
+                        <View>
+                            <View className="flex-row justify-between items-center py-1.5">
+                                <Text className="text-[13px] text-slate-500">Nominal Token</Text>
+                                <Text className="text-sm font-semibold text-slate-800">{formatRupiah(costNum)}</Text>
                             </View>
-                            <View style={styles.previewRow}>
-                                <Text style={styles.previewLabel}>Estimasi kWh</Text>
-                                <Text style={[styles.previewValue, { color: colors.topup }]}>
-                                    +{formatKwh(calculatedKwh, 2)}
-                                </Text>
+                            <View className="flex-row justify-between items-center py-1.5">
+                                <Text className="text-[13px] text-slate-500">Estimasi kWh</Text>
+                                <Text className="text-sm font-semibold text-topup">+{formatKwh(calculatedKwh, 2)}</Text>
                             </View>
-                            <View style={styles.divider} />
-                            <View style={styles.previewRow}>
-                                <Text style={styles.previewLabel}>Meter Sebelumnya</Text>
-                                <Text style={styles.previewValue}>
+                            <View className="h-px bg-border my-2" />
+                            <View className="flex-row justify-between items-center py-1.5">
+                                <Text className="text-[13px] text-slate-500">Meter Sebelumnya</Text>
+                                <Text className="text-sm font-semibold text-slate-800">
                                     {lastReading ? formatKwh(lastReading.kwh_value, 1) : '-'}
                                 </Text>
                             </View>
-                            <View style={styles.previewRow}>
-                                <Text style={styles.previewLabel}>Meter Baru (Est.)</Text>
-                                <Text style={[styles.previewValue, { color: colors.success, fontWeight: '700' }]}>
+                            <View className="flex-row justify-between items-center py-1.5">
+                                <Text className="text-[13px] text-slate-500">Meter Baru (Est.)</Text>
+                                <Text className="text-sm font-bold text-success">
                                     {formatKwh(parseFloat(newKwhValue) || 0, 2)}
                                 </Text>
                             </View>
@@ -386,14 +374,10 @@ export function TopUpForm({
                 />
 
                 {/* Photo Capture */}
-                <PhotoCapture
-                    photoUri={photoUri}
-                    onPhotoChange={setPhotoUri}
-                    variant="topup"
-                />
+                <PhotoCapture photoUri={photoUri} onPhotoChange={setPhotoUri} variant="topup" />
 
                 {/* Submit Button */}
-                <View style={styles.submitContainer}>
+                <View className="mt-6">
                     <GradientButton
                         title="Simpan Top Up"
                         onPress={handleSubmit}
@@ -405,112 +389,15 @@ export function TopUpForm({
             </GlassCard>
 
             {/* Info Card */}
-            <GlassCard style={styles.infoCard}>
-                <Text style={styles.infoTitle}>⚡ Smart Pre-fill</Text>
-                <Text style={styles.infoText}>
+            <GlassCard className="mt-4 bg-amber-50 border-amber-100">
+                <Text className="text-sm font-semibold text-slate-800 mb-2">⚡ Smart Pre-fill</Text>
+                <Text className="text-[13px] text-slate-500 leading-5">
                     Sistem akan otomatis menghitung estimasi kWh berdasarkan nominal token dan tarif PLN Anda.
                     Posisi meter baru akan di-prefill otomatis.
                 </Text>
             </GlassCard>
 
-            <View style={{ height: 32 }} />
+            <View className="h-8" />
         </ScrollView>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: 16,
-    },
-    cardTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: colors.text,
-        marginBottom: 20,
-    },
-    dateContainer: {
-        marginBottom: 16,
-    },
-    label: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: colors.text,
-        marginBottom: 6,
-    },
-    dateButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        padding: 14,
-        backgroundColor: colors.background,
-        borderWidth: 1,
-        borderColor: colors.border,
-        borderRadius: 12,
-    },
-    dateText: {
-        fontSize: 16,
-        color: colors.text,
-    },
-    webDateInput: {
-        flex: 1,
-        fontSize: 16,
-        color: colors.text,
-        backgroundColor: 'transparent',
-    },
-    previewCard: {
-        marginBottom: 16,
-        backgroundColor: '#FFFBEB',
-    },
-    previewHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 12,
-    },
-    previewTitle: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: colors.topup,
-    },
-    previewContent: {},
-    previewRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingVertical: 6,
-    },
-    previewLabel: {
-        fontSize: 13,
-        color: colors.textSecondary,
-    },
-    previewValue: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: colors.text,
-    },
-    divider: {
-        height: 1,
-        backgroundColor: colors.border,
-        marginVertical: 8,
-    },
-    submitContainer: {
-        marginTop: 24,
-    },
-    infoCard: {
-        marginTop: 16,
-        backgroundColor: '#FFFBEB',
-        borderColor: '#FEF3C7',
-    },
-    infoTitle: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: colors.text,
-        marginBottom: 8,
-    },
-    infoText: {
-        fontSize: 13,
-        color: colors.textSecondary,
-        lineHeight: 20,
-    },
-});

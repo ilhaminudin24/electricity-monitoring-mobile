@@ -1,9 +1,11 @@
+import "../global.css";
 import { useEffect, useState } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { colors } from '@/constants/colors';
 
 function RootLayoutNav() {
@@ -62,11 +64,13 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
     return (
-        <SafeAreaProvider>
-            <AuthProvider>
-                <RootLayoutNav />
-            </AuthProvider>
-        </SafeAreaProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <SafeAreaProvider>
+                <AuthProvider>
+                    <RootLayoutNav />
+                </AuthProvider>
+            </SafeAreaProvider>
+        </GestureHandlerRootView>
     );
 }
 

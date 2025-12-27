@@ -3,7 +3,6 @@ import {
     View,
     Text,
     Modal,
-    StyleSheet,
     TouchableOpacity,
     TouchableWithoutFeedback,
 } from 'react-native';
@@ -41,39 +40,46 @@ export function DuplicateDateModal({
             onRequestClose={onClose}
         >
             <TouchableWithoutFeedback onPress={onClose}>
-                <View style={styles.overlay}>
+                <View className="flex-1 bg-black/50 justify-center items-center p-6">
                     <TouchableWithoutFeedback>
-                        <View style={styles.container}>
+                        <View className="bg-white rounded-[20px] p-6 w-full max-w-[340px] items-center">
                             {/* Close Button */}
-                            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                            <TouchableOpacity
+                                className="absolute top-3 right-3 p-2"
+                                onPress={onClose}
+                            >
                                 <X size={20} color={colors.textSecondary} />
                             </TouchableOpacity>
 
                             {/* Icon */}
-                            <View style={styles.iconContainer}>
+                            <View className="mb-4">
                                 <AlertCircle size={48} color={colors.warning} />
                             </View>
 
                             {/* Title */}
-                            <Text style={styles.title}>Data Sudah Ada</Text>
+                            <Text className="text-xl font-bold text-slate-800 mb-3 text-center">
+                                Data Sudah Ada
+                            </Text>
 
                             {/* Description */}
-                            <Text style={styles.description}>
+                            <Text className="text-sm text-slate-500 text-center leading-[22px] mb-6">
                                 Sudah ada pembacaan meter untuk tanggal{' '}
-                                <Text style={styles.highlight}>
+                                <Text className="font-semibold text-slate-800">
                                     {formatDate(existingReading.date, 'd MMMM yyyy')}
                                 </Text>
                                 {'\n'}dengan nilai {formatKwh(existingReading.kwh_value, 1)}
                             </Text>
 
                             {/* Action Buttons */}
-                            <View style={styles.actions}>
+                            <View className="w-full gap-3">
                                 <TouchableOpacity
-                                    style={styles.secondaryButton}
+                                    className="flex-row items-center justify-center gap-2 py-3.5 border-2 border-primary-500 rounded-xl bg-primary-50"
                                     onPress={onEditExisting}
                                 >
                                     <Edit3 size={18} color={colors.primary[600]} />
-                                    <Text style={styles.secondaryButtonText}>Edit Data Lama</Text>
+                                    <Text className="text-base font-semibold text-primary-600">
+                                        Edit Data Lama
+                                    </Text>
                                 </TouchableOpacity>
 
                                 <GradientButton
@@ -91,68 +97,3 @@ export function DuplicateDateModal({
         </Modal>
     );
 }
-
-const styles = StyleSheet.create({
-    overlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 24,
-    },
-    container: {
-        backgroundColor: colors.background,
-        borderRadius: 20,
-        padding: 24,
-        width: '100%',
-        maxWidth: 340,
-        alignItems: 'center',
-    },
-    closeButton: {
-        position: 'absolute',
-        top: 12,
-        right: 12,
-        padding: 8,
-    },
-    iconContainer: {
-        marginBottom: 16,
-    },
-    title: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: colors.text,
-        marginBottom: 12,
-        textAlign: 'center',
-    },
-    description: {
-        fontSize: 14,
-        color: colors.textSecondary,
-        textAlign: 'center',
-        lineHeight: 22,
-        marginBottom: 24,
-    },
-    highlight: {
-        fontWeight: '600',
-        color: colors.text,
-    },
-    actions: {
-        width: '100%',
-        gap: 12,
-    },
-    secondaryButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        paddingVertical: 14,
-        borderWidth: 2,
-        borderColor: colors.primary[500],
-        borderRadius: 12,
-        backgroundColor: colors.primary[50],
-    },
-    secondaryButtonText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: colors.primary[600],
-    },
-});

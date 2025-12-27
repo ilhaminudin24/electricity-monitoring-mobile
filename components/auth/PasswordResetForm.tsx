@@ -4,7 +4,6 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    StyleSheet,
     ActivityIndicator,
     Alert,
 } from 'react-native';
@@ -37,10 +36,10 @@ export function PasswordResetForm() {
 
     if (sent) {
         return (
-            <View style={styles.successContainer}>
-                <Text style={styles.successIcon}>✅</Text>
-                <Text style={styles.successTitle}>Email Terkirim!</Text>
-                <Text style={styles.successText}>
+            <View className="items-center p-6 bg-surface rounded-2xl">
+                <Text className="text-5xl mb-4">✅</Text>
+                <Text className="text-success text-xl font-semibold mb-2">Email Terkirim!</Text>
+                <Text className="text-slate-500 text-sm text-center leading-5">
                     Silakan cek inbox atau folder spam email Anda untuk link reset password.
                 </Text>
             </View>
@@ -48,11 +47,11 @@ export function PasswordResetForm() {
     }
 
     return (
-        <View style={styles.container}>
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Email</Text>
+        <View className="gap-4">
+            <View className="gap-1.5">
+                <Text className="text-slate-500 text-sm font-medium">Email</Text>
                 <TextInput
-                    style={styles.input}
+                    className="bg-surface rounded-xl p-4 text-slate-800 text-base border border-border"
                     placeholder="nama@email.com"
                     placeholderTextColor={colors.slate[500]}
                     value={email}
@@ -64,7 +63,7 @@ export function PasswordResetForm() {
             </View>
 
             <TouchableOpacity
-                style={[styles.button, loading && styles.buttonDisabled]}
+                className={`bg-primary-600 rounded-xl p-4 items-center ${loading ? 'opacity-70' : ''}`}
                 onPress={handleReset}
                 disabled={loading}
                 activeOpacity={0.8}
@@ -72,68 +71,9 @@ export function PasswordResetForm() {
                 {loading ? (
                     <ActivityIndicator color="white" />
                 ) : (
-                    <Text style={styles.buttonText}>Kirim Link Reset</Text>
+                    <Text className="text-white text-base font-semibold">Kirim Link Reset</Text>
                 )}
             </TouchableOpacity>
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        gap: 16,
-    },
-    inputContainer: {
-        gap: 6,
-    },
-    label: {
-        color: colors.textSecondary,
-        fontSize: 14,
-        fontWeight: '500',
-    },
-    input: {
-        backgroundColor: colors.surface,
-        borderRadius: 12,
-        padding: 16,
-        color: colors.text,
-        fontSize: 16,
-        borderWidth: 1,
-        borderColor: colors.border,
-    },
-    button: {
-        backgroundColor: colors.primary[600],
-        borderRadius: 12,
-        padding: 16,
-        alignItems: 'center',
-    },
-    buttonDisabled: {
-        opacity: 0.7,
-    },
-    buttonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    successContainer: {
-        alignItems: 'center',
-        padding: 24,
-        backgroundColor: colors.surface,
-        borderRadius: 16,
-    },
-    successIcon: {
-        fontSize: 48,
-        marginBottom: 16,
-    },
-    successTitle: {
-        color: colors.success,
-        fontSize: 20,
-        fontWeight: '600',
-        marginBottom: 8,
-    },
-    successText: {
-        color: colors.textSecondary,
-        fontSize: 14,
-        textAlign: 'center',
-        lineHeight: 20,
-    },
-});

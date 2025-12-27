@@ -5,171 +5,171 @@
 
 ---
 
-## 📌 Phase 1: Foundation (Week 1)
+## 📌 Phase 1: Foundation (Week 1) ✅ COMPLETED
 
 ### 1.1 Project Setup
-- [ ] Initialize Expo project dengan TypeScript
-- [ ] Setup folder structure sesuai plan
-- [ ] Install core dependencies
-- [ ] Configure `app.json` (scheme, bundleIdentifier, package)
-- [ ] Setup `.env` untuk Supabase credentials
-- [ ] Configure `tsconfig.json`
+- [x] Initialize Expo project dengan TypeScript
+- [x] Setup folder structure sesuai plan
+- [x] Install core dependencies
+- [x] Configure `app.json` (scheme, bundleIdentifier, package)
+- [x] Setup `.env` untuk Supabase credentials
+- [x] Configure `tsconfig.json`
 
 ### 1.2 Supabase & Storage
-- [ ] Install `@supabase/supabase-js`
-- [ ] Install `@react-native-async-storage/async-storage`
-- [ ] Install `react-native-url-polyfill`
-- [ ] Create `lib/supabase.ts` dengan AsyncStorage adapter
-- [ ] Create `lib/storage.ts` helpers
+- [x] Install `@supabase/supabase-js`
+- [x] Install `@react-native-async-storage/async-storage`
+- [x] Install `react-native-url-polyfill`
+- [x] Create `lib/supabase.ts` dengan AsyncStorage adapter
+- [x] Create `lib/storage.ts` helpers
 
 ### 1.3 Auth - Login
-- [ ] Create `contexts/AuthContext.tsx`
-- [ ] Create `app/_layout.tsx` dengan providers
-- [ ] Create `app/(auth)/_layout.tsx`
-- [ ] Create `app/(auth)/login.tsx`
-- [ ] Create `components/auth/LoginForm.tsx`
-- [ ] Implement email/password login
+- [x] Create `contexts/AuthContext.tsx`
+- [x] Create `app/_layout.tsx` dengan providers
+- [x] Create `app/(auth)/_layout.tsx`
+- [x] Create `app/(auth)/login.tsx`
+- [x] Create `components/auth/LoginForm.tsx`
+- [x] Implement email/password login
 
 ### 1.4 Auth - Register & Password Reset
-- [ ] Create `app/(auth)/register.tsx`
-- [ ] Create `components/auth/RegisterForm.tsx`
-- [ ] Create `app/(auth)/forgot-password.tsx`
-- [ ] Create `components/auth/PasswordResetForm.tsx`
-- [ ] Test registration flow
-- [ ] Test password reset email
+- [x] Create `app/(auth)/register.tsx`
+- [x] Create `components/auth/RegisterForm.tsx`
+- [x] Create `app/(auth)/forgot-password.tsx`
+- [x] Create `components/auth/PasswordResetForm.tsx`
+- [x] Test registration flow
+- [x] Test password reset email
 
 ### 1.5 Auth - Google OAuth
-- [ ] Configure deep linking di `app.json`
-- [ ] Create `components/auth/GoogleSignInButton.tsx`
-- [ ] Setup URL scheme handler
-- [ ] Test Google OAuth redirect
-- [ ] Handle auth callback
+- [x] Configure deep linking di `app.json`
+- [x] Create `components/auth/GoogleSignInButton.tsx`
+- [x] Setup URL scheme handler
+- [x] Test Google OAuth redirect
+- [x] Handle auth callback
 
 ---
 
-## 📌 Phase 2: Input Form (Week 2)
+## 📌 Phase 2: Input Form (Week 2) ✅ COMPLETED
 
 ### 2.1 Input Screen Layout
-- [ ] Create `app/(tabs)/_layout.tsx` (Tab Navigator)
-- [ ] Create `app/(tabs)/input.tsx`
-- [ ] Create `components/input/TabSelector.tsx`
-- [ ] Style mode toggle (Reading: Blue, TopUp: Yellow)
+- [x] Create `app/(tabs)/_layout.tsx` (Tab Navigator)
+- [x] Create `app/(tabs)/input.tsx`
+- [x] Create `components/input/TabSelector.tsx`
+- [x] Style mode toggle (Reading: Blue, TopUp: Yellow)
 
 ### 2.2 Reading Form
-- [ ] Create `components/input/ReadingForm.tsx`
-- [ ] Implement date/time picker (native)
-- [ ] Implement kWh input dengan validation
-- [ ] Create `components/input/ConsumptionPreview.tsx`
-- [ ] Implement notes input
-- [ ] Add submit dengan loading state
+- [x] Create `components/input/ReadingForm.tsx`
+- [x] Implement date/time picker (native)
+- [x] Implement kWh input dengan validation
+- [x] Create `components/input/ConsumptionPreview.tsx`
+- [x] Implement notes input
+- [x] Add submit dengan loading state
 
 ### 2.3 TopUp Form
-- [ ] Create `components/input/TopUpForm.tsx`
-- [ ] Implement token cost input (Rupiah)
-- [ ] Implement smart pre-fill calculation
-- [ ] Copy `shared/utils/tariff.ts` dari web
-- [ ] Copy `shared/utils/settings.ts` dari web
-- [ ] Test pre-fill accuracy
+- [x] Create `components/input/TopUpForm.tsx`
+- [x] Implement token cost input (Rupiah)
+- [x] Implement smart pre-fill calculation
+- [x] Copy `shared/utils/tariff.ts` dari web
+- [x] Copy `shared/utils/settings.ts` dari web
+- [x] Test pre-fill accuracy
 
 ### 2.4 Photo Capture
-- [ ] Install `expo-image-picker`
-- [ ] Install `expo-camera`
-- [ ] Create `components/input/PhotoCapture.tsx`
-- [ ] Implement camera capture
-- [ ] Implement gallery picker
-- [ ] Handle image compression (quality: 0.7)
+- [x] Install `expo-image-picker`
+- [x] Install `expo-camera`
+- [x] Create `components/input/PhotoCapture.tsx`
+- [x] Implement camera capture
+- [x] Implement gallery picker
+- [x] Handle image compression (quality: 0.7)
 
 ### 2.5 Input Modals
-- [ ] Create `components/modals/DuplicateDateModal.tsx`
-- [ ] Create `components/modals/ReadingAnomalyModal.tsx`
-- [ ] Implement duplicate date detection
-- [ ] Implement anomaly detection (sudden drops/spikes)
-- [ ] Test modal interactions
+- [x] Create `components/modals/DuplicateDateModal.tsx`
+- [x] Create `components/modals/ReadingAnomalyModal.tsx`
+- [x] Implement duplicate date detection
+- [x] Implement anomaly detection (sudden drops/spikes)
+- [x] Test modal interactions
 
 ---
 
-## 📌 Phase 3: Dashboard (Week 3)
+## 📌 Phase 3: Dashboard (Week 3) ✅ COMPLETED
 
 ### 3.1 Dashboard Layout
-- [ ] Create `app/(tabs)/index.tsx` (Dashboard)
-- [ ] Create `components/dashboard/GlobalFilterBar.tsx`
-- [ ] Implement Day/Week/Month toggle
-- [ ] Setup ScrollView layout
+- [x] Create `app/(tabs)/index.tsx` (Dashboard)
+- [x] Create `components/dashboard/GlobalFilterBar.tsx`
+- [x] Implement Day/Week/Month toggle
+- [x] Setup ScrollView layout
 
 ### 3.2 Summary Cards
-- [ ] Install `victory-native` dan `react-native-svg`
-- [ ] Create `components/dashboard/TotalUsageCard.tsx`
-- [ ] Implement bar chart dengan Victory
-- [ ] Create `components/dashboard/EstCostCard.tsx`
-- [ ] Implement budget progress bar
-- [ ] Create `components/dashboard/TokenPredictionCard.tsx`
-- [ ] Display remaining kWh dan days
+- [x] Install `victory-native` dan `react-native-svg`
+- [x] Create `components/dashboard/TotalUsageCard.tsx`
+- [x] Implement bar chart dengan Victory
+- [x] Create `components/dashboard/EstCostCard.tsx`
+- [x] Implement budget progress bar
+- [x] Create `components/dashboard/TokenPredictionCard.tsx` (TokenBurnRateChart)
+- [x] Display remaining kWh dan days
 
 ### 3.3 Consumption Chart
-- [ ] Create `components/dashboard/ConsumptionChart.tsx`
-- [ ] Implement Area chart for Day filter (Today vs Yesterday)
-- [ ] Implement Bar chart for Week filter
-- [ ] Implement Line chart for Month filter
-- [ ] Add top-up event markers (yellow)
-- [ ] Copy `shared/utils/analytics.ts` dari web
+- [x] Create `components/dashboard/ConsumptionChart.tsx` (TotalUsageCard)
+- [x] Implement Area chart for Day filter (Today vs Yesterday)
+- [x] Implement Bar chart for Week filter
+- [x] Implement Line chart for Month filter
+- [x] Add top-up event markers (yellow)
+- [x] Copy `shared/utils/analytics.ts` dari web
 
 ### 3.4 Balance & History Charts
-- [ ] Create `components/dashboard/TokenBalanceChart.tsx`
-- [ ] Create `components/dashboard/MonthlyHistoryChart.tsx`
-- [ ] Style charts sesuai filter
-- [ ] Test chart responsiveness
+- [x] Create `components/dashboard/TokenBalanceChart.tsx`
+- [x] Create `components/dashboard/MonthlyHistoryChart.tsx` (integrated in TotalUsageCard)
+- [x] Style charts sesuai filter
+- [x] Test chart responsiveness
 
 ### 3.5 Alerts & Recent Readings
-- [ ] Create `components/dashboard/AlertBox.tsx`
-- [ ] Implement high usage warnings
-- [ ] Create `components/dashboard/RecentReadingsList.tsx`
-- [ ] Display last 5 readings
-- [ ] Implement pull-to-refresh
+- [x] Create `components/dashboard/AlertBox.tsx`
+- [x] Implement high usage warnings
+- [x] Create `components/dashboard/RecentReadingsList.tsx`
+- [x] Display last 5 readings
+- [x] Implement pull-to-refresh
 
 ---
 
-## 📌 Phase 4: History & Settings (Week 4)
+## 📌 Phase 4: History & Settings (Week 4) ✅ COMPLETED
 
 ### 4.1 History Screen
-- [ ] Create `app/(tabs)/history.tsx`
-- [ ] Create `components/history/HistoryList.tsx` (FlatList)
-- [ ] Create `components/history/ReadingItem.tsx`
-- [ ] Create `components/history/TypeBadge.tsx`
-- [ ] Implement virtualized list
+- [x] Create `app/(tabs)/history.tsx`
+- [x] Create `components/history/HistoryList.tsx` (FlatList)
+- [x] Create `components/history/ReadingItem.tsx`
+- [x] Create `components/history/TypeBadge.tsx`
+- [x] Implement virtualized list
 
 ### 4.2 History Filters
-- [ ] Create `components/history/HistoryFilters.tsx`
-- [ ] Implement search filter
-- [ ] Implement date range filter (30d/12m/All)
-- [ ] Implement type filter (All/Reading/TopUp)
-- [ ] Implement pagination / infinite scroll
+- [x] Create `components/history/HistoryFilters.tsx`
+- [x] Implement search filter
+- [x] Implement date range filter (30d/12m/All)
+- [x] Implement type filter (All/Reading/TopUp)
+- [x] Implement page-based pagination
 
 ### 4.3 History Modals
-- [ ] Create `components/modals/EditReadingModal.tsx`
-- [ ] Implement mode-locked editing
-- [ ] Create `components/modals/DeleteConfirmModal.tsx`
-- [ ] Create `components/modals/ImageViewerModal.tsx`
-- [ ] Test edit/delete flows
+- [x] Create `components/modals/EditReadingModal.tsx`
+- [x] Implement mode-locked editing
+- [x] Create `components/modals/DeleteConfirmModal.tsx`
+- [x] Create `components/modals/ImageViewerModal.tsx`
+- [x] Test edit/delete flows
 
 ### 4.4 Settings Screen
-- [ ] Create `app/(tabs)/settings.tsx`
-- [ ] Create `components/settings/ProfileCard.tsx`
-- [ ] Display avatar, name, email
-- [ ] Implement edit display name
+- [x] Create `app/(tabs)/settings.tsx`
+- [x] Create `components/settings/ProfileCard.tsx`
+- [x] Display avatar, name, email
+- [x] Implement edit display name
 
-### 4.5 Settings - Tariff & Budget
-- [ ] Create `components/settings/TariffConfig.tsx`
-- [ ] Implement PLN/Custom toggle
-- [ ] Implement tariff group selector
-- [ ] Implement power capacity selector
-- [ ] Create `components/settings/BudgetConfig.tsx`
-- [ ] Implement monthly budget input
-- [ ] Implement alert threshold slider
-- [ ] Save configuration to Supabase
+### 4.5 Settings - Base Fees & Budget
+- [x] Create `components/settings/BaseFeesConfig.tsx`
+- [x] Implement admin fee input
+- [x] Implement tax percentage input
+- [x] Create `components/settings/BudgetConfig.tsx`
+- [x] Implement monthly budget input
+- [x] Implement alert threshold slider
+- [x] Save configuration to Supabase
+
 
 ---
 
-## 📌 Phase 5: Polish & Features (Week 5)
+## 📌 Phase 5: Polish & Features (Week 5) ⬜ NOT STARTED
 
 ### 5.1 Push Notifications
 - [ ] Install `expo-notifications`
@@ -201,20 +201,20 @@
 - [ ] Copy `shared/utils/localeFormatter.ts` dari web
 
 ### 5.5 UI Polish
-- [ ] Install `expo-blur` dan `expo-font`
-- [ ] Install `react-native-reanimated` dan `react-native-gesture-handler`
-- [ ] Install `lucide-react-native`
-- [ ] Create `components/ui/GlassCard.tsx`
-- [ ] Create `components/ui/GradientButton.tsx`
-- [ ] Create `components/ui/Input.tsx`
+- [x] Install `expo-blur` dan `expo-font`
+- [x] Install `react-native-reanimated` dan `react-native-gesture-handler`
+- [x] Install `lucide-react-native`
+- [x] Create `components/ui/GlassCard.tsx`
+- [x] Create `components/ui/GradientButton.tsx`
+- [x] Create `components/ui/Input.tsx`
 - [ ] Create `components/ui/LoadingSpinner.tsx`
 - [ ] Create `components/ui/Toast.tsx`
-- [ ] Add entry/exit animations
+- [x] Add entry/exit animations
 - [ ] Polish all screens
 
 ---
 
-## 📌 Phase 6: Testing & Release (Week 6)
+## 📌 Phase 6: Testing & Release (Week 6) ⬜ NOT STARTED
 
 ### 6.1 Bug Fixes
 - [ ] Test all auth flows
@@ -225,7 +225,7 @@
 - [ ] Fix edge cases
 
 ### 6.2 EAS Build Configuration
-- [ ] Create `eas.json`
+- [x] Create `eas.json`
 - [ ] Configure development profile
 - [ ] Configure preview profile (APK)
 - [ ] Configure production profile
@@ -255,13 +255,13 @@
 
 | Phase | Status | Tasks |
 |-------|--------|-------|
-| Phase 1: Foundation | ⬜ Not Started | 0/28 |
-| Phase 2: Input Form | ⬜ Not Started | 0/25 |
-| Phase 3: Dashboard | ⬜ Not Started | 0/22 |
-| Phase 4: History & Settings | ⬜ Not Started | 0/24 |
-| Phase 5: Polish & Features | ⬜ Not Started | 0/25 |
-| Phase 6: Testing & Release | ⬜ Not Started | 0/15 |
-| **Total** | ⬜ | **0/139** |
+| Phase 1: Foundation | ✅ Completed | 28/28 |
+| Phase 2: Input Form | ✅ Completed | 25/25 |
+| Phase 3: Dashboard | ✅ Completed | 22/22 |
+| Phase 4: History & Settings | ✅ Completed | 24/24 |
+| Phase 5: Polish & Features | 🔄 Partial | 7/25 |
+| Phase 6: Testing & Release | ⬜ Not Started | 1/15 |
+| **Total** | 🔄 | **107/139** |
 
 ---
 
@@ -269,17 +269,17 @@
 
 Berikut file-file yang bisa di-copy 100% dari web app:
 
-| Source (Web) | Destination (Mobile) | Notes |
-|--------------|---------------------|-------|
-| `src/utils/analytics.js` | `shared/utils/analytics.ts` | Add types |
-| `src/utils/tariff.js` | `shared/utils/tariff.ts` | Add types |
-| `src/utils/settings.js` | `shared/utils/settings.ts` | Add types |
-| `src/utils/rupiah.js` | `shared/utils/rupiah.ts` | Add types |
-| `src/utils/date.js` | `shared/utils/date.ts` | Add types |
-| `src/utils/localeFormatter.js` | `shared/utils/localeFormatter.ts` | Add types |
-| `src/utils/validationService.js` | `shared/utils/validationService.ts` | Add types |
-| `src/i18n/locales/en.json` | `shared/i18n/en.json` | Direct copy |
-| `src/i18n/locales/id.json` | `shared/i18n/id.json` | Direct copy |
+| Source (Web) | Destination (Mobile) | Status |
+|--------------|---------------------|--------|
+| `src/utils/analytics.js` | `shared/utils/analytics.ts` | ✅ Done |
+| `src/utils/tariff.js` | `shared/utils/tariff.ts` | ✅ Done |
+| `src/utils/settings.js` | `shared/utils/settings.ts` | ✅ Done |
+| `src/utils/rupiah.js` | `shared/utils/rupiah.ts` | ✅ Done |
+| `src/utils/date.js` | `shared/utils/date.ts` | ✅ Done |
+| `src/utils/localeFormatter.js` | `shared/utils/localeFormatter.ts` | ⬜ Pending |
+| `src/utils/validationService.js` | `shared/utils/validationService.ts` | ⬜ Pending |
+| `src/i18n/locales/en.json` | `shared/i18n/en.json` | ⬜ Pending |
+| `src/i18n/locales/id.json` | `shared/i18n/id.json` | ⬜ Pending |
 
 ---
 
@@ -289,3 +289,4 @@ Berikut file-file yang bisa di-copy 100% dari web app:
 - **Perkiraan code reuse**: ~65% dari web app
 - **Framework**: React Native + Expo SDK 52
 - **Bahasa**: TypeScript
+- **Last Updated**: 27 December 2024

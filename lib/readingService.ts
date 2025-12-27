@@ -321,3 +321,68 @@ export const getAllReadings = async (
         throw error;
     }
 };
+
+/**
+ * Get all readings AFTER a specific date (for backdate recalculation)
+ * Used when user inputs a top-up with a past date
+ */
+export const getReadingsAfterDate = async (
+    userId: string,
+    afterDate: Date | string
+): Promise<Reading[]> => {
+    try {
+        // Extract date-only string (YYYY-MM-DD) using local time
+        const dateObj = new Date(afterDate);
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const dateOnly = `${year}-${month}-${day}`;
+
+        const { data, error } = await supabase
+            .from('electricity_readings')
+            .select('*')
+            .eq('user_id', userId)
+            .gt('date', dateOnly) // strictly greater than the selected date
+            .order('date', { ascending: true }); // oldest first
+
+        if (error) throw error;
+        return (data as Reading[]) || [];
+    } catch (error) {
+        console.error('Error fetching readings after date:', error);
+        return [];
+    }
+};
+
+/**
+ * Bulk update kWh values for multiple readings
+ * Used for backdate recalculation when a past top-up affects future readings
+ */
+export const bulkUpdateReadingsKwh = async (
+    updates: Array<{ id: string; kwh_value: number }>
+): Promise<Reading[]> => {
+    if (!updates || updates.length === 0) return [];
+
+    try {
+        // Parallel update using Promise.all
+        const results = await Promise.all(
+            updates.map(({ id, kwh_value }) =>
+                supabase
+                    .from('electricity_readings')
+                    .update({ kwh_value: parseFloat(String(kwh_value)) })
+                    .eq('id', id)
+                    .select()
+                    .single()
+            )
+        );
+
+        // Check for errors
+        const errors = results.filter(r => r.error);
+        if (errors.length > 0) {
+            throw new Error(`Failed to update ${errors.length} of ${updates.length} readings`);
+        }
+
+        return results.map(r => r.data as Reading);
+    } catch (error) {
+        throw error;
+    }
+};

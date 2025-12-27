@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import { LineChart } from 'react-native-chart-kit';
+import { View, Text, Dimensions } from 'react-native';
+import { CartesianChart, Line, Area, useChartPressState } from 'victory-native';
+import { Circle } from '@shopify/react-native-skia';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { colors } from '@/constants/colors';
@@ -12,104 +13,76 @@ interface TokenBalanceChartProps {
 }
 
 const screenWidth = Dimensions.get('window').width;
-const chartWidth = screenWidth - 72;
+const CHART_HEIGHT = 160;
 
 export function TokenBalanceChart({ dailyData, loading }: TokenBalanceChartProps) {
+    // Touch interaction state
+    const { state, isActive } = useChartPressState({ x: 0, y: { y: 0 } });
+
     // Always show last 30 days regardless of global filter
     const getChartData = () => {
         if (!dailyData || dailyData.length === 0) return [];
-        // Filter for days that have a meter value (or interpolate if we had logic, 
-        // but here we just take the points that exist or use daily entries)
-        // dailyUsage always has entries for each day if computed correctly with range
-        // We take up to last 30 days
         const last30 = dailyData.slice(-30);
 
-        // Filter out null meterValues if any, though computeDailyUsage should handle it
-        // We want to show the specific days
-        return last30;
+        const validPoints = last30.filter(
+            d => d.meterValue !== null && d.meterValue !== undefined && d.meterValue > 0
+        );
+
+        if (validPoints.length === 0) return [];
+
+        // Sample evenly for readability (max 15 points)
+        const chartPoints = validPoints.filter((_: unknown, i: number) =>
+            i === 0 ||
+            i === validPoints.length - 1 ||
+            i % Math.ceil(validPoints.length / 15) === 0
+        ).slice(0, 15);
+
+        return chartPoints.map((d, index) => ({
+            x: index,
+            y: d.meterValue || 0,
+            date: d.date,
+            isTopUp: d.isTopUp || false,
+            usage: d.usage || 0,
+            topUpAmount: d.topUpAmount || 0,
+        }));
     };
 
-    const data = getChartData();
-    const hasData = data.length > 0 && data.some(d => d.meterValue !== null && d.meterValue !== undefined);
+    const chartData = getChartData();
+    const hasData = chartData.length > 0;
 
-    // Prepare chart points
-    // We only plot points where meterValue exists
-    const validPoints = data.filter(d => d.meterValue !== null && d.meterValue !== undefined && d.meterValue > 0);
+    // Get active tooltip data when user touches chart
+    const activeData = isActive && state.x.value !== undefined
+        ? chartData[Math.round(state.x.value.value)]
+        : null;
 
-    // If too many points, sample them for labels but keep data for line?
-    // Chart Kit needs equal length labels and data.
-    // We'll use all valid points but limit labels to avoid clutter.
-
-    // Actually, to make the chart look like a continuous history over 30 days, 
-    // we should ideally use all 30 points.
-    // If meterValue is missing for some days (e.g. gap), we might need to handle it.
-    // But computeDailyUsage fills gaps with 'usage' but maybe not 'meterValue' if it's not a topup day?
-    // Wait, computeDailyUsage sets meterValue = currKwh. So it should be the ENDING kwh of that day.
-    // So every DailyUsage entry should have a meterValue if calculated correctly.
-
-    const chartData = {
-        labels: validPoints.map((d, i) => {
-            // Show label for first, last, and every ~5th point
-            if (i === 0 || i === validPoints.length - 1 || i % 6 === 0) {
-                return format(new Date(d.date), 'd MMM', { locale: idLocale });
-            }
-            return '';
-        }),
-        datasets: [
-            {
-                data: validPoints.map(d => d.meterValue || 0),
-                color: (opacity = 1) => colors.success,
-                strokeWidth: 2,
-            },
-            {
-                // Dummy dataset for dots coloring? 
-                // ChartKit uses getDotColor callback.
-                data: [],
-                withDots: false
-            }
-        ],
-        legend: ['Sisa Token (kWh)']
-    };
-
-    const chartConfig = {
-        backgroundGradientFrom: colors.surface,
-        backgroundGradientTo: colors.surface,
-        decimalPlaces: 1,
-        color: (opacity = 1) => colors.success,
-        labelColor: (opacity = 1) => colors.textSecondary,
-        propsForDots: {
-            r: '4',
-            strokeWidth: '2',
-            stroke: colors.success,
-        },
-        propsForBackgroundLines: {
-            stroke: colors.border,
-            strokeDasharray: '4,4',
-        },
-        fillShadowGradient: colors.success,
-        fillShadowGradientOpacity: 0.2,
-    };
-
-    // Custom dot content to highlight top ups?
-    // React Native Chart Kit limit: getDotColor is the main way.
-    // We can highlight top-ups with a different dot color.
-
-    const getDotColor = (dataPoint: number, index: number) => {
-        const point = validPoints[index];
-        if (point && point.isTopUp) {
-            return colors.topup; // Blue for topup
+    // Format date for display
+    const formatDate = (dateStr: string) => {
+        try {
+            return format(new Date(dateStr), 'd MMM yyyy', { locale: idLocale });
+        } catch {
+            return dateStr;
         }
-        return colors.success; // Green for normal
+    };
+
+    // Format short date
+    const formatShortDate = (dateStr: string) => {
+        try {
+            return format(new Date(dateStr), 'd MMM', { locale: idLocale });
+        } catch {
+            return dateStr;
+        }
     };
 
     if (loading) {
         return (
-            <View style={styles.card}>
-                <View style={styles.header}>
-                    <Text style={styles.title}>Riwayat Saldo Token</Text>
+            <View className="bg-surface rounded-2xl p-4 mx-6 mb-3 border border-border">
+                <View className="mb-4">
+                    <Text className="text-base font-semibold text-slate-800">
+                        Riwayat Saldo Token
+                    </Text>
                 </View>
-                <View style={styles.loadingContainer}>
-                    <Text style={styles.loadingText}>Memuat...</Text>
+                <View className="h-[180px] justify-center items-center">
+                    <Text className="text-slate-500">Memuat...</Text>
                 </View>
             </View>
         );
@@ -117,94 +90,156 @@ export function TokenBalanceChart({ dailyData, loading }: TokenBalanceChartProps
 
     if (!hasData) {
         return (
-            <View style={styles.card}>
-                <View style={styles.header}>
-                    <Text style={styles.title}>Riwayat Saldo Token</Text>
-                    <Text style={styles.subtitle}>30 Hari Terakhir</Text>
+            <View className="bg-surface rounded-2xl p-4 mx-6 mb-3 border border-border">
+                <View className="mb-4">
+                    <Text className="text-base font-semibold text-slate-800">
+                        Riwayat Saldo Token
+                    </Text>
+                    <Text className="text-xs text-slate-500 mt-0.5">
+                        30 Hari Terakhir
+                    </Text>
                 </View>
-                <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>Belum ada data saldo</Text>
+                <View className="h-[120px] justify-center items-center">
+                    <Text className="text-sm text-slate-500">Belum ada data saldo</Text>
                 </View>
             </View>
         );
     }
 
     return (
-        <View style={styles.card}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Riwayat Saldo Token</Text>
-                <Text style={styles.subtitle}>30 Hari Terakhir</Text>
+        <View className="bg-surface rounded-2xl p-4 mx-6 mb-3 border border-border">
+            <View className="mb-4">
+                <Text className="text-base font-semibold text-slate-800">
+                    Riwayat Saldo Token
+                </Text>
+                <Text className="text-xs text-slate-500 mt-0.5">
+                    30 Hari Terakhir
+                </Text>
             </View>
 
-            <View style={styles.chartContainer}>
-                <LineChart
-                    data={chartData}
-                    width={chartWidth}
-                    height={180}
-                    yAxisLabel=""
-                    yAxisSuffix=" kWh"
-                    chartConfig={chartConfig}
-                    style={styles.chart}
-                    bezier
-                    withDots={true}
-                    withShadow={true}
-                    fromZero={false} // Allow auto-scale to see variations better
-                    getDotColor={getDotColor}
-                    onDataPointClick={({ value, dataset, getColor }) => {
-                        // Optional: show tooltip
-                    }}
-                />
+            {/* Tooltip - shown when user touches chart */}
+            {activeData && isActive && (
+                <View className="bg-white rounded-xl p-3 mb-2 shadow-sm border border-slate-100">
+                    <View className="flex-row items-center justify-between mb-2">
+                        <Text className="text-sm font-semibold text-slate-800">
+                            📅 {formatDate(activeData.date)}
+                        </Text>
+                        {activeData.isTopUp && (
+                            <View className="bg-topup/15 px-2 py-0.5 rounded">
+                                <Text className="text-[10px] font-semibold text-topup">
+                                    ⚡ Top Up
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                    <View className="flex-row justify-between">
+                        <View className="flex-1">
+                            <Text className="text-[10px] text-slate-500">Saldo Token</Text>
+                            <Text className="text-base font-bold text-success">
+                                {activeData.y?.toFixed(1) || '0.0'} kWh
+                            </Text>
+                        </View>
+                        <View className="flex-1">
+                            <Text className="text-[10px] text-slate-500">Konsumsi</Text>
+                            <Text className="text-base font-bold text-reading">
+                                {activeData.usage > 0 ? `-${activeData.usage.toFixed(2)}` : '0.00'} kWh
+                            </Text>
+                        </View>
+                        {activeData.isTopUp && activeData.topUpAmount > 0 && (
+                            <View className="flex-1">
+                                <Text className="text-[10px] text-slate-500">Top Up</Text>
+                                <Text className="text-base font-bold text-topup">
+                                    +{activeData.topUpAmount.toFixed(1)} kWh
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                </View>
+            )}
+
+            {/* Chart */}
+            <View className="items-center my-2">
+                <View style={{ height: CHART_HEIGHT, width: screenWidth - 72 }}>
+                    <CartesianChart
+                        data={chartData}
+                        xKey="x"
+                        yKeys={["y"]}
+                        domainPadding={{ left: 10, right: 10, top: 20, bottom: 10 }}
+                        chartPressState={state}
+                    >
+                        {({ points }) => (
+                            <>
+                                <Area
+                                    points={points.y}
+                                    y0={CHART_HEIGHT}
+                                    color={colors.success}
+                                    opacity={0.2}
+                                    curveType="natural"
+                                />
+                                <Line
+                                    points={points.y}
+                                    color={colors.success}
+                                    strokeWidth={2}
+                                    curveType="natural"
+                                />
+                                {/* Active indicator dot */}
+                                {isActive && state.y.y.position && (
+                                    <Circle
+                                        cx={state.x.position.value}
+                                        cy={state.y.y.position.value}
+                                        r={6}
+                                        color={colors.primary[500]}
+                                    />
+                                )}
+                                {/* Dots for top-up points and endpoints */}
+                                {points.y.map((point: any, index: number) => {
+                                    if (point.y === undefined || point.y === null) return null;
+                                    const dataPoint = chartData[index];
+                                    const isTopUp = dataPoint?.isTopUp;
+                                    const isEndpoint = index === 0 || index === points.y.length - 1;
+
+                                    if (!isTopUp && !isEndpoint) return null;
+
+                                    return (
+                                        <Circle
+                                            key={index}
+                                            cx={point.x}
+                                            cy={point.y}
+                                            r={isTopUp ? 5 : 4}
+                                            color={isTopUp ? colors.topup : colors.success}
+                                        />
+                                    );
+                                })}
+                            </>
+                        )}
+                    </CartesianChart>
+                </View>
+
+                {/* X-Axis Labels */}
+                <View className="flex-row justify-between w-full px-2 mt-1">
+                    <Text className="text-[10px] text-slate-400">
+                        {chartData.length > 0 ? formatShortDate(chartData[0].date) : ''}
+                    </Text>
+                    <Text className="text-[10px] text-slate-400">
+                        {chartData.length > 0 ? formatShortDate(chartData[chartData.length - 1].date) : ''}
+                    </Text>
+                </View>
             </View>
+
+            {/* Legend with touch hint */}
+            <View className="flex-row justify-center mt-2 gap-4">
+                <View className="flex-row items-center gap-1">
+                    <View className="w-3 h-3 rounded-full bg-success" />
+                    <Text className="text-xs text-slate-500">Sisa Token</Text>
+                </View>
+                <View className="flex-row items-center gap-1">
+                    <View className="w-3 h-3 rounded-full bg-topup" />
+                    <Text className="text-xs text-slate-500">Top Up</Text>
+                </View>
+            </View>
+            <Text className="text-[10px] text-slate-400 text-center mt-1">
+                Sentuh chart untuk detail
+            </Text>
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    card: {
-        backgroundColor: colors.surface,
-        borderRadius: 16,
-        padding: 16,
-        marginHorizontal: 24,
-        marginBottom: 12,
-        borderWidth: 1,
-        borderColor: colors.border,
-    },
-    header: {
-        marginBottom: 16,
-    },
-    title: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: colors.text,
-    },
-    subtitle: {
-        fontSize: 12,
-        color: colors.textSecondary,
-        marginTop: 2,
-    },
-    chartContainer: {
-        alignItems: 'center',
-    },
-    chart: {
-        borderRadius: 8,
-        paddingRight: 16, // Add padding for rightmost labels
-    },
-    loadingContainer: {
-        height: 180,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    loadingText: {
-        color: colors.textSecondary,
-    },
-    emptyContainer: {
-        height: 120,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    emptyText: {
-        color: colors.textSecondary,
-        fontSize: 14,
-    },
-});
-

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { colors } from '@/constants/colors';
 
 type FilterType = 'day' | 'week' | 'month';
@@ -17,21 +17,17 @@ export function GlobalFilterBar({ filter, onFilterChange }: GlobalFilterBarProps
     ];
 
     return (
-        <View style={styles.container}>
+        <View className="flex-row bg-surface rounded-xl p-1 mx-6 mb-4 border border-border">
             {filters.map(({ key, label }) => (
                 <TouchableOpacity
                     key={key}
-                    style={[
-                        styles.filterButton,
-                        filter === key && styles.filterButtonActive,
-                    ]}
+                    className={`flex-1 py-2.5 px-4 rounded-lg items-center ${filter === key ? 'bg-reading' : ''
+                        }`}
                     onPress={() => onFilterChange(key)}
                 >
                     <Text
-                        style={[
-                            styles.filterText,
-                            filter === key && styles.filterTextActive,
-                        ]}
+                        className={`text-sm font-medium ${filter === key ? 'text-white font-semibold' : 'text-slate-500'
+                            }`}
                     >
                         {label}
                     </Text>
@@ -40,35 +36,3 @@ export function GlobalFilterBar({ filter, onFilterChange }: GlobalFilterBarProps
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flexDirection: 'row',
-        backgroundColor: colors.surface,
-        borderRadius: 12,
-        padding: 4,
-        marginHorizontal: 24,
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: colors.border,
-    },
-    filterButton: {
-        flex: 1,
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    filterButtonActive: {
-        backgroundColor: colors.reading,
-    },
-    filterText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: colors.textSecondary,
-    },
-    filterTextActive: {
-        color: '#FFFFFF',
-        fontWeight: '600',
-    },
-});

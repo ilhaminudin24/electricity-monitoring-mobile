@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 import { colors } from '@/constants/colors';
 import { formatRupiah } from '@/shared/utils/rupiah';
 
@@ -28,125 +28,53 @@ export function EstCostCard({ estimatedCost, budgetMonthly, alertThreshold, load
     };
 
     return (
-        <View style={styles.card}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Estimasi Biaya</Text>
-                <Text style={[styles.status, { color: getProgressColor() }]}>
+        <View className="bg-surface rounded-2xl p-4 mx-6 mb-3 border border-border">
+            <View className="flex-row justify-between items-center mb-2">
+                <Text className="text-base font-semibold text-slate-800">
+                    Estimasi Biaya
+                </Text>
+                <Text
+                    className="text-xs font-medium"
+                    style={{ color: getProgressColor() }}
+                >
                     {getStatusText()}
                 </Text>
             </View>
 
             {loading ? (
-                <View style={styles.loadingContainer}>
-                    <Text style={styles.loadingText}>Memuat...</Text>
+                <View className="h-20 justify-center items-center">
+                    <Text className="text-slate-500">Memuat...</Text>
                 </View>
             ) : (
                 <>
-                    <Text style={styles.costValue}>{formatRupiah(estimatedCost)}</Text>
-                    <Text style={styles.budgetText}>
+                    <Text className="text-[28px] font-bold text-slate-800">
+                        {formatRupiah(estimatedCost)}
+                    </Text>
+                    <Text className="text-sm text-slate-500 mt-0.5 mb-3">
                         dari {formatRupiah(budgetMonthly)}
                     </Text>
 
-                    <View style={styles.progressContainer}>
-                        <View style={styles.progressBackground}>
+                    <View className="flex-row items-center gap-3">
+                        <View className="flex-1 h-2 bg-border rounded overflow-hidden relative">
                             <View
-                                style={[
-                                    styles.progressFill,
-                                    {
-                                        width: `${Math.min(percentage, 100)}%`,
-                                        backgroundColor: getProgressColor(),
-                                    },
-                                ]}
+                                className="h-full rounded"
+                                style={{
+                                    width: `${Math.min(percentage, 100)}%`,
+                                    backgroundColor: getProgressColor(),
+                                }}
                             />
                             {/* Alert threshold indicator */}
                             <View
-                                style={[
-                                    styles.thresholdIndicator,
-                                    { left: `${alertThreshold}%` },
-                                ]}
+                                className="absolute -top-0.5 w-0.5 h-3 bg-topup"
+                                style={{ left: `${alertThreshold}%` }}
                             />
                         </View>
-                        <Text style={styles.percentageText}>{percentage.toFixed(0)}%</Text>
+                        <Text className="text-sm font-semibold text-slate-500 min-w-[40px] text-right">
+                            {percentage.toFixed(0)}%
+                        </Text>
                     </View>
                 </>
             )}
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    card: {
-        backgroundColor: colors.surface,
-        borderRadius: 16,
-        padding: 16,
-        marginHorizontal: 24,
-        marginBottom: 12,
-        borderWidth: 1,
-        borderColor: colors.border,
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    title: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: colors.text,
-    },
-    status: {
-        fontSize: 12,
-        fontWeight: '500',
-    },
-    costValue: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: colors.text,
-    },
-    budgetText: {
-        fontSize: 14,
-        color: colors.textSecondary,
-        marginTop: 2,
-        marginBottom: 12,
-    },
-    progressContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    progressBackground: {
-        flex: 1,
-        height: 8,
-        backgroundColor: colors.border,
-        borderRadius: 4,
-        overflow: 'hidden',
-        position: 'relative',
-    },
-    progressFill: {
-        height: '100%',
-        borderRadius: 4,
-    },
-    thresholdIndicator: {
-        position: 'absolute',
-        top: -2,
-        width: 2,
-        height: 12,
-        backgroundColor: colors.topup,
-    },
-    percentageText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: colors.textSecondary,
-        minWidth: 40,
-        textAlign: 'right',
-    },
-    loadingContainer: {
-        height: 80,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    loadingText: {
-        color: colors.textSecondary,
-    },
-});

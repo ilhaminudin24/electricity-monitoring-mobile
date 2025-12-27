@@ -4,7 +4,6 @@ import {
     Text,
     TouchableOpacity,
     Image,
-    StyleSheet,
     Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -88,12 +87,15 @@ export function PhotoCapture({
 
     if (photoUri) {
         return (
-            <View style={styles.previewContainer}>
-                <Text style={styles.label}>Foto Bukti</Text>
-                <View style={styles.imageWrapper}>
-                    <Image source={{ uri: photoUri }} style={styles.preview} />
+            <View className="mt-4">
+                <Text className="text-sm font-medium text-slate-800 mb-2">Foto Bukti</Text>
+                <View className="relative rounded-xl overflow-hidden">
+                    <Image
+                        source={{ uri: photoUri }}
+                        className="w-full h-[200px] rounded-xl bg-slate-200"
+                    />
                     <TouchableOpacity
-                        style={[styles.removeButton, { backgroundColor: colors.error }]}
+                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-error items-center justify-center"
                         onPress={removePhoto}
                     >
                         <X size={16} color="#FFFFFF" />
@@ -104,83 +106,33 @@ export function PhotoCapture({
     }
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.label}>Foto Bukti (Opsional)</Text>
-            <View style={styles.buttonRow}>
+        <View className="mt-4">
+            <Text className="text-sm font-medium text-slate-800 mb-2">Foto Bukti (Opsional)</Text>
+            <View className="flex-row gap-3">
                 <TouchableOpacity
-                    style={[styles.button, { borderColor: accentColor }]}
+                    className="flex-1 flex-row items-center justify-center gap-2 py-3.5 border-2 border-dashed rounded-xl bg-surface"
+                    style={{ borderColor: accentColor }}
                     onPress={takePhoto}
                     disabled={loading}
                 >
                     <Camera size={20} color={accentColor} />
-                    <Text style={[styles.buttonText, { color: accentColor }]}>Kamera</Text>
+                    <Text className="text-sm font-semibold" style={{ color: accentColor }}>
+                        Kamera
+                    </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                    style={[styles.button, { borderColor: accentColor }]}
+                    className="flex-1 flex-row items-center justify-center gap-2 py-3.5 border-2 border-dashed rounded-xl bg-surface"
+                    style={{ borderColor: accentColor }}
                     onPress={pickFromGallery}
                     disabled={loading}
                 >
                     <ImageIcon size={20} color={accentColor} />
-                    <Text style={[styles.buttonText, { color: accentColor }]}>Galeri</Text>
+                    <Text className="text-sm font-semibold" style={{ color: accentColor }}>
+                        Galeri
+                    </Text>
                 </TouchableOpacity>
             </View>
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        marginTop: 16,
-    },
-    previewContainer: {
-        marginTop: 16,
-    },
-    label: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: colors.text,
-        marginBottom: 8,
-    },
-    buttonRow: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    button: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        paddingVertical: 14,
-        borderWidth: 2,
-        borderStyle: 'dashed',
-        borderRadius: 12,
-        backgroundColor: colors.surface,
-    },
-    buttonText: {
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    imageWrapper: {
-        position: 'relative',
-        borderRadius: 12,
-        overflow: 'hidden',
-    },
-    preview: {
-        width: '100%',
-        height: 200,
-        borderRadius: 12,
-        backgroundColor: colors.slate[200],
-    },
-    removeButton: {
-        position: 'absolute',
-        top: 8,
-        right: 8,
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-});

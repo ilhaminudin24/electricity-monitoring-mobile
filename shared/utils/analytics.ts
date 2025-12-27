@@ -123,7 +123,12 @@ export function sortReadingsChronologically(readings: Reading[]): Reading[] {
 
 /**
  * Compute daily usage from readings
- * Returns array of daily usage data sorted chronologically
+ * IMPORTANT: This function DISTRIBUTES consumption evenly across all days
+ * between two readings, matching the website logic.
+ * 
+ * Example: Reading on Dec 17 (35 kWh) and Dec 20 (22 kWh)
+ * -> Consumption = 13 kWh over 3 days
+ * -> Dec 18, 19, 20 each get 13/3 = 4.33 kWh
  */
 export function computeDailyUsage(readings: Reading[], days: number = 30): DailyUsage[] {
     if (!readings || readings.length < 2) return [];
@@ -137,45 +142,76 @@ export function computeDailyUsage(readings: Reading[], days: number = 30): Daily
 
         const prevKwh = prev.kwh_value;
         const currKwh = curr.kwh_value;
-        const dateKey = format(new Date(curr.date), 'yyyy-MM-dd');
+        const prevDate = startOfDay(new Date(prev.date));
+        const currDate = startOfDay(new Date(curr.date));
 
         // Check if this is a top-up (kWh increased)
         const isTopUp = currKwh > prevKwh;
         const hasTopUp = curr.token_cost !== null && curr.token_cost !== undefined && curr.token_cost > 0;
 
-        // Calculate usage (negative if top-up, we use absolute for consumption)
-        let usage = 0;
+        // Calculate consumption
+        let totalUsage = 0;
         if (!isTopUp) {
-            usage = prevKwh - currKwh; // Normal consumption
+            totalUsage = prevKwh - currKwh;
         }
 
-        const existing = dailyMap.get(dateKey);
-        if (existing) {
-            existing.usage += usage;
-            existing.usage_kwh += usage;
-            if (hasTopUp) {
-                existing.hasTopUp = true;
-                existing.isTopUp = true;
-                existing.topUpAmount = (existing.topUpAmount || 0) + (curr.token_amount || 0);
+        // Calculate days between readings
+        const daysDiff = differenceInDays(currDate, prevDate);
+
+        if (daysDiff > 0) {
+            // Distribute consumption evenly across days
+            const dailyUsageAmount = totalUsage / daysDiff;
+
+            for (let d = 1; d <= daysDiff; d++) {
+                const dayDate = addDays(prevDate, d);
+                const dateKey = format(dayDate, 'yyyy-MM-dd');
+
+                const existing = dailyMap.get(dateKey);
+                if (existing) {
+                    existing.usage += dailyUsageAmount;
+                    existing.usage_kwh += dailyUsageAmount;
+                    if (d === daysDiff && hasTopUp) {
+                        existing.hasTopUp = true;
+                    }
+                } else {
+                    dailyMap.set(dateKey, {
+                        date: dateKey,
+                        usage: dailyUsageAmount,
+                        usage_kwh: dailyUsageAmount,
+                        kwhStart: prevKwh,
+                        kwhEnd: currKwh,
+                        meterValue: d === daysDiff ? currKwh : null,
+                        hasTopUp: d === daysDiff ? hasTopUp : false,
+                        isTopUp: d === daysDiff ? hasTopUp : false,
+                        topUpAmount: d === daysDiff && hasTopUp ? (curr.token_amount || 0) : 0,
+                    });
+                }
             }
-            // Update meterValue to the latest reading
-            existing.meterValue = currKwh;
-        } else {
-            dailyMap.set(dateKey, {
-                date: dateKey,
-                usage: Math.max(0, usage),
-                usage_kwh: Math.max(0, usage),
-                kwhStart: prevKwh,
-                kwhEnd: currKwh,
-                meterValue: currKwh,
-                hasTopUp,
-                isTopUp: hasTopUp,
-                topUpAmount: hasTopUp ? (curr.token_amount || 0) : 0,
-            });
+        } else if (daysDiff === 0 && totalUsage > 0) {
+            // Same day
+            const dateKey = format(currDate, 'yyyy-MM-dd');
+            const existing = dailyMap.get(dateKey);
+            if (existing) {
+                existing.usage += totalUsage;
+                existing.usage_kwh += totalUsage;
+            } else {
+                dailyMap.set(dateKey, {
+                    date: dateKey,
+                    usage: totalUsage,
+                    usage_kwh: totalUsage,
+                    kwhStart: prevKwh,
+                    kwhEnd: currKwh,
+                    meterValue: currKwh,
+                    hasTopUp,
+                    isTopUp: hasTopUp,
+                    topUpAmount: hasTopUp ? (curr.token_amount || 0) : 0,
+                });
+            }
         }
+        // Top-ups (isTopUp=true) don't add consumption
     }
 
-    // Sort by date and limit to requested days
+    // Sort by date and limit
     const result = Array.from(dailyMap.values())
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
@@ -203,7 +239,8 @@ export function aggregateWeekly(dailyUsage: DailyUsage[], weeks: number = 12): W
         } else {
             weeklyMap.set(weekKey, {
                 week: weekKey,
-                label: `${format(weekStart, 'd MMM', { locale: idLocale })} - ${format(weekEnd, 'd MMM', { locale: idLocale })}`,
+                // Format: "Des 8-14" matching website style
+                label: `${format(weekStart, 'MMM', { locale: idLocale })} ${format(weekStart, 'd')}-${format(weekEnd, 'd')}`,
                 startDate: format(weekStart, 'yyyy-MM-dd'),
                 endDate: format(weekEnd, 'yyyy-MM-dd'),
                 usage: day.usage,
@@ -392,33 +429,77 @@ export function calculateStats(dailyUsage: DailyUsage[]) {
 
 /**
  * Prepare chart data for Victory Native
+ * Matches reference logic from catattoken.id:
+ * - Day: 7 calendar days (last 7 days, fill 0 for missing)
+ * - Week: 4 aggregated weekly bars
+ * - Month: 6 aggregated monthly bars
  */
 export function prepareChartData(
     dailyUsage: DailyUsage[],
     filter: 'day' | 'week' | 'month'
 ): ChartDataPoint[] {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Create a lookup map for daily usage
+    const usageMap = new Map<string, DailyUsage>();
+    dailyUsage.forEach(d => usageMap.set(d.date, d));
+
     switch (filter) {
         case 'day':
-            return dailyUsage.slice(-2).map((d, i) => ({
-                x: i === 0 ? 'Kemarin' : 'Hari Ini',
-                y: d.usage,
-                hasTopUp: d.hasTopUp,
-            }));
+            // Website logic: Show 7 CALENDAR days ending at the LAST READING DATE
+            // This ensures the chart matches website regardless of when you open it
+            // Find the last reading date from dailyUsage
+            const sortedByDate = [...dailyUsage].sort(
+                (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+            );
+            const lastReadingDate = sortedByDate.length > 0
+                ? new Date(sortedByDate[0].date)
+                : subDays(today, 1);
+
+            const days: ChartDataPoint[] = [];
+
+            for (let i = 6; i >= 0; i--) {
+                const date = subDays(lastReadingDate, i);
+                const dateKey = format(date, 'yyyy-MM-dd');
+                const dayData = usageMap.get(dateKey);
+
+                // Format: "17 Rab" or "23 Sel" - day number + short weekday
+                const labelText = format(date, 'd EEE', { locale: idLocale });
+
+                days.push({
+                    x: labelText,
+                    y: dayData?.usage || 0,
+                    label: labelText,
+                    hasTopUp: dayData?.hasTopUp || false,
+                });
+            }
+
+            // DEBUG LOG
+            const totalDebug = days.reduce((sum, d) => sum + d.y, 0);
+            console.log('[Day Filter] Last reading:', format(lastReadingDate, 'yyyy-MM-dd'), 'Total kWh:', totalDebug.toFixed(1));
+            console.log('[Day Filter] Days:', days.map(d => `${d.x}: ${d.y.toFixed(1)}`).join(', '));
+
+            return days;
 
         case 'week':
-            return dailyUsage.slice(-7).map(d => ({
-                x: format(new Date(d.date), 'EEE', { locale: idLocale }),
-                y: d.usage,
-                label: format(new Date(d.date), 'd MMM', { locale: idLocale }),
-                hasTopUp: d.hasTopUp,
+            // Aggregate into 4 weekly bars
+            const weeklyData = aggregateWeekly(dailyUsage, 4);
+            return weeklyData.slice(-4).map(w => ({
+                x: w.label, // Full label like "Des 8-14"
+                y: w.usage,
+                label: w.label,
+                hasTopUp: w.hasTopUp,
             }));
 
         case 'month':
-            return dailyUsage.slice(-30).map(d => ({
-                x: format(new Date(d.date), 'd'),
-                y: d.usage,
-                label: format(new Date(d.date), 'd MMM', { locale: idLocale }),
-                hasTopUp: d.hasTopUp,
+            // Aggregate into 6 monthly bars
+            const monthlyData = aggregateMonthly(dailyUsage, 6);
+            return monthlyData.slice(-6).map(m => ({
+                x: format(new Date(m.month + '-01'), 'MMM', { locale: idLocale }),
+                y: m.usage,
+                label: m.label,
+                hasTopUp: m.hasTopUp,
             }));
 
         default:

@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { TouchableOpacity, Text, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native';
+import { TouchableOpacity, Text, Alert, ActivityIndicator, Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/constants/colors';
 import * as Linking from 'expo-linking';
-import Constants from 'expo-constants';
 
 // Ensure WebBrowser sessions are handled properly
 WebBrowser.maybeCompleteAuthSession();
@@ -16,9 +15,7 @@ export function GoogleSignInButton() {
         setLoading(true);
 
         try {
-            // Create redirect URL using Expo Linking (works in Expo Go)
             const redirectUrl = Linking.createURL('auth/callback');
-
             console.log('Google OAuth redirect URL:', redirectUrl);
 
             const { data, error } = await supabase.auth.signInWithOAuth({
@@ -44,10 +41,7 @@ export function GoogleSignInButton() {
                 if (result.type === 'success' && result.url) {
                     console.log('Callback URL received');
 
-                    // Parse tokens from callback URL
                     const url = new URL(result.url);
-
-                    // Tokens can be in query params or hash fragment
                     const hashParams = new URLSearchParams(url.hash?.substring(1) || '');
                     const accessToken = url.searchParams.get('access_token') || hashParams.get('access_token');
                     const refreshToken = url.searchParams.get('refresh_token') || hashParams.get('refresh_token');
@@ -67,7 +61,6 @@ export function GoogleSignInButton() {
 
                         console.log('Google login successful!');
                     } else {
-                        // Try to get session from Supabase directly (it might have been set automatically)
                         const { data: sessionData } = await supabase.auth.getSession();
                         if (sessionData?.session) {
                             console.log('Session found from Supabase');
@@ -95,7 +88,7 @@ export function GoogleSignInButton() {
 
     return (
         <TouchableOpacity
-            style={styles.button}
+            className="bg-white rounded-xl p-4 flex-row items-center justify-center gap-2 border border-border"
             onPress={handleGoogleLogin}
             disabled={loading}
             activeOpacity={0.8}
@@ -103,27 +96,10 @@ export function GoogleSignInButton() {
             {loading ? (
                 <ActivityIndicator color={colors.slate[800]} />
             ) : (
-                <Text style={styles.buttonText}>🔵 Masuk dengan Google</Text>
+                <Text className="text-slate-800 text-base font-semibold">
+                    🔵 Masuk dengan Google
+                </Text>
             )}
         </TouchableOpacity>
     );
 }
-
-const styles = StyleSheet.create({
-    button: {
-        backgroundColor: 'white',
-        borderRadius: 12,
-        padding: 16,
-        alignItems: 'center',
-        flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 8,
-        borderWidth: 1,
-        borderColor: colors.border,
-    },
-    buttonText: {
-        color: colors.slate[800],
-        fontSize: 16,
-        fontWeight: '600',
-    },
-});

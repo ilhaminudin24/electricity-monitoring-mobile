@@ -4,7 +4,6 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    StyleSheet,
     ActivityIndicator,
     Alert,
 } from 'react-native';
@@ -21,7 +20,6 @@ export function RegisterForm() {
     const [error, setError] = useState('');
 
     const handleRegister = async () => {
-        // Validation
         if (!name.trim()) {
             setError('Nama harus diisi');
             return;
@@ -66,17 +64,17 @@ export function RegisterForm() {
     };
 
     return (
-        <View style={styles.container}>
+        <View className="gap-4">
             {error ? (
-                <View style={styles.errorContainer}>
-                    <Text style={styles.error}>{error}</Text>
+                <View className="bg-error/10 rounded-lg p-3 border border-error">
+                    <Text className="text-error text-center text-sm">{error}</Text>
                 </View>
             ) : null}
 
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Nama Lengkap</Text>
+            <View className="gap-1.5">
+                <Text className="text-slate-500 text-sm font-medium">Nama Lengkap</Text>
                 <TextInput
-                    style={styles.input}
+                    className="bg-surface rounded-xl p-4 text-slate-800 text-base border border-border"
                     placeholder="John Doe"
                     placeholderTextColor={colors.slate[500]}
                     value={name}
@@ -88,10 +86,10 @@ export function RegisterForm() {
                 />
             </View>
 
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Email</Text>
+            <View className="gap-1.5">
+                <Text className="text-slate-500 text-sm font-medium">Email</Text>
                 <TextInput
-                    style={styles.input}
+                    className="bg-surface rounded-xl p-4 text-slate-800 text-base border border-border"
                     placeholder="nama@email.com"
                     placeholderTextColor={colors.slate[500]}
                     value={email}
@@ -105,10 +103,10 @@ export function RegisterForm() {
                 />
             </View>
 
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Password</Text>
+            <View className="gap-1.5">
+                <Text className="text-slate-500 text-sm font-medium">Password</Text>
                 <TextInput
-                    style={styles.input}
+                    className="bg-surface rounded-xl p-4 text-slate-800 text-base border border-border"
                     placeholder="Minimal 6 karakter"
                     placeholderTextColor={colors.slate[500]}
                     value={password}
@@ -121,10 +119,10 @@ export function RegisterForm() {
                 />
             </View>
 
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Konfirmasi Password</Text>
+            <View className="gap-1.5">
+                <Text className="text-slate-500 text-sm font-medium">Konfirmasi Password</Text>
                 <TextInput
-                    style={styles.input}
+                    className="bg-surface rounded-xl p-4 text-slate-800 text-base border border-border"
                     placeholder="Ulangi password"
                     placeholderTextColor={colors.slate[500]}
                     value={confirmPassword}
@@ -138,7 +136,7 @@ export function RegisterForm() {
             </View>
 
             <TouchableOpacity
-                style={[styles.button, loading && styles.buttonDisabled]}
+                className={`bg-secondary-600 rounded-xl p-4 items-center mt-2 ${loading ? 'opacity-70' : ''}`}
                 onPress={handleRegister}
                 disabled={loading}
                 activeOpacity={0.8}
@@ -146,59 +144,9 @@ export function RegisterForm() {
                 {loading ? (
                     <ActivityIndicator color="white" />
                 ) : (
-                    <Text style={styles.buttonText}>Daftar</Text>
+                    <Text className="text-white text-base font-semibold">Daftar</Text>
                 )}
             </TouchableOpacity>
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        gap: 16,
-    },
-    inputContainer: {
-        gap: 6,
-    },
-    label: {
-        color: colors.textSecondary,
-        fontSize: 14,
-        fontWeight: '500',
-    },
-    input: {
-        backgroundColor: colors.surface,
-        borderRadius: 12,
-        padding: 16,
-        color: colors.text,
-        fontSize: 16,
-        borderWidth: 1,
-        borderColor: colors.border,
-    },
-    button: {
-        backgroundColor: colors.secondary[600],
-        borderRadius: 12,
-        padding: 16,
-        alignItems: 'center',
-        marginTop: 8,
-    },
-    buttonDisabled: {
-        opacity: 0.7,
-    },
-    buttonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    errorContainer: {
-        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-        borderRadius: 8,
-        padding: 12,
-        borderWidth: 1,
-        borderColor: colors.error,
-    },
-    error: {
-        color: colors.error,
-        textAlign: 'center',
-        fontSize: 14,
-    },
-});

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 import { Target, TrendingUp, TrendingDown, Minus, Wallet, Activity, Lightbulb } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 import { EfficiencyScore } from '@/shared/utils/analytics';
@@ -39,18 +39,12 @@ export function EfficiencyScoreCard({ score, hasData, message, loading }: Effici
 
     const gradeColors = getGradeColor(grade);
 
-    // SVG Ring Progress calculations
-    const radius = 40;
-    const circumference = 2 * Math.PI * radius;
-    const progress = hasData ? (totalScore / 100) * circumference : 0;
-    const offset = circumference - progress;
-
     // Get score status
     const getScoreStatus = (pts: number, maxPts: number) => {
         const ratio = pts / maxPts;
-        if (ratio >= 0.7) return { icon: '✓', color: colors.success, bg: `${colors.success}20` };
-        if (ratio >= 0.5) return { icon: '!', color: colors.topup, bg: `${colors.topup}20` };
-        return { icon: '✗', color: colors.error, bg: `${colors.error}20` };
+        if (ratio >= 0.7) return { bg: `${colors.success}20` };
+        if (ratio >= 0.5) return { bg: `${colors.topup}20` };
+        return { bg: `${colors.error}20` };
     };
 
     // Get grade message
@@ -90,13 +84,13 @@ export function EfficiencyScoreCard({ score, hasData, message, loading }: Effici
 
     if (loading) {
         return (
-            <View style={styles.card}>
-                <View style={styles.header}>
+            <View className="bg-surface rounded-2xl p-4 mx-6 mb-3 border border-border">
+                <View className="flex-row items-center gap-2 mb-4">
                     <Target size={20} color={colors.reading} />
-                    <Text style={styles.title}>Skor Efisiensi</Text>
+                    <Text className="text-base font-semibold text-slate-800">Skor Efisiensi</Text>
                 </View>
-                <View style={styles.loadingContainer}>
-                    <Text style={styles.loadingText}>Memuat...</Text>
+                <View className="h-[120px] justify-center items-center">
+                    <Text className="text-slate-500">Memuat...</Text>
                 </View>
             </View>
         );
@@ -104,14 +98,14 @@ export function EfficiencyScoreCard({ score, hasData, message, loading }: Effici
 
     if (!hasData) {
         return (
-            <View style={styles.card}>
-                <View style={styles.header}>
+            <View className="bg-surface rounded-2xl p-4 mx-6 mb-3 border border-border">
+                <View className="flex-row items-center gap-2 mb-4">
                     <Target size={20} color={colors.reading} />
-                    <Text style={styles.title}>Skor Efisiensi</Text>
+                    <Text className="text-base font-semibold text-slate-800">Skor Efisiensi</Text>
                 </View>
-                <View style={styles.emptyContainer}>
+                <View className="py-6 items-center gap-3">
                     <Target size={40} color={colors.textSecondary} style={{ opacity: 0.5 }} />
-                    <Text style={styles.emptyText}>
+                    <Text className="text-sm text-slate-500 text-center">
                         {message || 'Butuh minimal 7 hari data'}
                     </Text>
                 </View>
@@ -120,61 +114,83 @@ export function EfficiencyScoreCard({ score, hasData, message, loading }: Effici
     }
 
     return (
-        <View style={styles.card}>
+        <View className="bg-surface rounded-2xl p-4 mx-6 mb-3 border border-border">
             {/* Header */}
-            <View style={styles.header}>
+            <View className="flex-row items-center gap-2 mb-4">
                 <Target size={20} color={colors.reading} />
-                <Text style={styles.title}>Skor Efisiensi</Text>
+                <Text className="text-base font-semibold text-slate-800">Skor Efisiensi</Text>
             </View>
 
             {/* Score Ring + Grade */}
-            <View style={styles.scoreRow}>
-                {/* SVG Ring */}
-                <View style={styles.ringContainer}>
-                    <View style={styles.ringBackground}>
-                        <Text style={[styles.scoreValue, { color: gradeColors.text }]}>{totalScore}</Text>
-                        <Text style={styles.scoreMax}>/100</Text>
+            <View className="flex-row items-center gap-4 mb-4">
+                {/* Ring */}
+                <View className="w-20 h-20 justify-center items-center">
+                    <View className="w-20 h-20 rounded-full border-[6px] border-border justify-center items-center">
+                        <Text
+                            className="text-2xl font-bold"
+                            style={{ color: gradeColors.text }}
+                        >
+                            {totalScore}
+                        </Text>
+                        <Text className="text-[10px] text-slate-500">/100</Text>
                     </View>
                 </View>
 
                 {/* Grade & Message */}
-                <View style={styles.gradeContainer}>
-                    <View style={[styles.gradeBadge, { backgroundColor: gradeColors.bg }]}>
-                        <Text style={[styles.gradeText, { color: gradeColors.text }]}>Grade {grade}</Text>
+                <View className="flex-1">
+                    <View
+                        className="self-start px-3 py-1 rounded-xl mb-1"
+                        style={{ backgroundColor: gradeColors.bg }}
+                    >
+                        <Text
+                            className="text-xs font-semibold"
+                            style={{ color: gradeColors.text }}
+                        >
+                            Grade {grade}
+                        </Text>
                     </View>
-                    <Text style={styles.gradeMessage}>{getGradeMessage(grade)}</Text>
+                    <Text className="text-[13px] text-slate-500">{getGradeMessage(grade)}</Text>
                 </View>
             </View>
 
             {/* Breakdown Cards */}
-            <View style={styles.breakdownRow}>
+            <View className="flex-row gap-2 mb-3">
                 {/* Consistency */}
-                <View style={[styles.breakdownCard, { backgroundColor: getScoreStatus(consistencyScore, 30).bg }]}>
-                    <View style={styles.breakdownHeader}>
+                <View
+                    className="flex-1 p-2.5 rounded-xl"
+                    style={{ backgroundColor: getScoreStatus(consistencyScore, 30).bg }}
+                >
+                    <View className="flex-row items-center gap-1 mb-1.5">
                         <Activity size={14} color={colors.textSecondary} />
-                        <Text style={styles.breakdownLabel}>Konsistensi</Text>
+                        <Text className="text-[10px] text-slate-500">Konsistensi</Text>
                     </View>
-                    <View style={styles.breakdownValue}>
-                        <Text style={styles.breakdownScore}>{consistencyScore}</Text>
-                        <Text style={styles.breakdownMax}>/30</Text>
+                    <View className="flex-row items-baseline">
+                        <Text className="text-lg font-bold text-slate-800">{consistencyScore}</Text>
+                        <Text className="text-[10px] text-slate-500">/30</Text>
                     </View>
                 </View>
 
                 {/* Budget */}
-                <View style={[styles.breakdownCard, { backgroundColor: getScoreStatus(budgetScore, 40).bg }]}>
-                    <View style={styles.breakdownHeader}>
+                <View
+                    className="flex-1 p-2.5 rounded-xl"
+                    style={{ backgroundColor: getScoreStatus(budgetScore, 40).bg }}
+                >
+                    <View className="flex-row items-center gap-1 mb-1.5">
                         <Wallet size={14} color={colors.textSecondary} />
-                        <Text style={styles.breakdownLabel}>Budget</Text>
+                        <Text className="text-[10px] text-slate-500">Budget</Text>
                     </View>
-                    <View style={styles.breakdownValue}>
-                        <Text style={styles.breakdownScore}>{budgetScore}</Text>
-                        <Text style={styles.breakdownMax}>/40</Text>
+                    <View className="flex-row items-baseline">
+                        <Text className="text-lg font-bold text-slate-800">{budgetScore}</Text>
+                        <Text className="text-[10px] text-slate-500">/40</Text>
                     </View>
                 </View>
 
                 {/* Trend */}
-                <View style={[styles.breakdownCard, { backgroundColor: getScoreStatus(trendScore, 30).bg }]}>
-                    <View style={styles.breakdownHeader}>
+                <View
+                    className="flex-1 p-2.5 rounded-xl"
+                    style={{ backgroundColor: getScoreStatus(trendScore, 30).bg }}
+                >
+                    <View className="flex-row items-center gap-1 mb-1.5">
                         {(breakdown?.trend?.changePct ?? 0) < 0 ? (
                             <TrendingDown size={14} color={colors.success} />
                         ) : (breakdown?.trend?.changePct ?? 0) > 0 ? (
@@ -182,27 +198,35 @@ export function EfficiencyScoreCard({ score, hasData, message, loading }: Effici
                         ) : (
                             <Minus size={14} color={colors.textSecondary} />
                         )}
-                        <Text style={styles.breakdownLabel}>Tren</Text>
+                        <Text className="text-[10px] text-slate-500">Tren</Text>
                     </View>
-                    <View style={styles.breakdownValue}>
-                        <Text style={styles.breakdownScore}>{trendScore}</Text>
-                        <Text style={styles.breakdownMax}>/30</Text>
+                    <View className="flex-row items-baseline">
+                        <Text className="text-lg font-bold text-slate-800">{trendScore}</Text>
+                        <Text className="text-[10px] text-slate-500">/30</Text>
                     </View>
                 </View>
             </View>
 
             {/* Tips */}
             {tips.length > 0 && (
-                <View style={styles.tipsContainer}>
+                <View className="gap-2">
                     {tips.slice(0, 2).map((tipType, idx) => {
                         const tipData = getTipData(tipType);
                         if (!tipData) return null;
                         return (
-                            <View key={idx} style={styles.tipItem}>
+                            <View
+                                key={idx}
+                                className="flex-row items-start gap-2.5 p-3 rounded-xl"
+                                style={{ backgroundColor: `${colors.topup}10` }}
+                            >
                                 <Lightbulb size={16} color={colors.topup} />
-                                <View style={styles.tipContent}>
-                                    <Text style={styles.tipTitle}>{tipData.title}</Text>
-                                    <Text style={styles.tipMessage}>{tipData.message}</Text>
+                                <View className="flex-1">
+                                    <Text className="text-[13px] font-semibold text-topup">
+                                        {tipData.title}
+                                    </Text>
+                                    <Text className="text-[11px] text-slate-500 mt-0.5">
+                                        {tipData.message}
+                                    </Text>
                                 </View>
                             </View>
                         );
@@ -212,179 +236,17 @@ export function EfficiencyScoreCard({ score, hasData, message, loading }: Effici
 
             {/* All Good */}
             {tips.length === 0 && hasData && (
-                <View style={styles.allGoodContainer}>
-                    <Text style={styles.allGoodEmoji}>🎉</Text>
+                <View
+                    className="flex-row items-center gap-3 p-3 rounded-xl"
+                    style={{ backgroundColor: `${colors.success}10` }}
+                >
+                    <Text className="text-2xl">🎉</Text>
                     <View>
-                        <Text style={styles.allGoodTitle}>Semuanya baik!</Text>
-                        <Text style={styles.allGoodMessage}>Pertahankan pola pemakaian Anda.</Text>
+                        <Text className="text-[13px] font-semibold text-success">Semuanya baik!</Text>
+                        <Text className="text-[11px] text-slate-500">Pertahankan pola pemakaian Anda.</Text>
                     </View>
                 </View>
             )}
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    card: {
-        backgroundColor: colors.surface,
-        borderRadius: 16,
-        padding: 16,
-        marginHorizontal: 24,
-        marginBottom: 12,
-        borderWidth: 1,
-        borderColor: colors.border,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 16,
-    },
-    title: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: colors.text,
-    },
-    loadingContainer: {
-        height: 120,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    loadingText: {
-        color: colors.textSecondary,
-    },
-    emptyContainer: {
-        paddingVertical: 24,
-        alignItems: 'center',
-        gap: 12,
-    },
-    emptyText: {
-        color: colors.textSecondary,
-        fontSize: 14,
-        textAlign: 'center',
-    },
-    scoreRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 16,
-        marginBottom: 16,
-    },
-    ringContainer: {
-        width: 80,
-        height: 80,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    ringBackground: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        borderWidth: 6,
-        borderColor: colors.border,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    scoreValue: {
-        fontSize: 24,
-        fontWeight: 'bold',
-    },
-    scoreMax: {
-        fontSize: 10,
-        color: colors.textSecondary,
-    },
-    gradeContainer: {
-        flex: 1,
-    },
-    gradeBadge: {
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 12,
-        alignSelf: 'flex-start',
-        marginBottom: 4,
-    },
-    gradeText: {
-        fontSize: 12,
-        fontWeight: '600',
-    },
-    gradeMessage: {
-        fontSize: 13,
-        color: colors.textSecondary,
-    },
-    breakdownRow: {
-        flexDirection: 'row',
-        gap: 8,
-        marginBottom: 12,
-    },
-    breakdownCard: {
-        flex: 1,
-        padding: 10,
-        borderRadius: 12,
-    },
-    breakdownHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        marginBottom: 6,
-    },
-    breakdownLabel: {
-        fontSize: 10,
-        color: colors.textSecondary,
-    },
-    breakdownValue: {
-        flexDirection: 'row',
-        alignItems: 'baseline',
-    },
-    breakdownScore: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: colors.text,
-    },
-    breakdownMax: {
-        fontSize: 10,
-        color: colors.textSecondary,
-    },
-    tipsContainer: {
-        gap: 8,
-    },
-    tipItem: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: 10,
-        padding: 12,
-        backgroundColor: `${colors.topup}10`,
-        borderRadius: 12,
-    },
-    tipContent: {
-        flex: 1,
-    },
-    tipTitle: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: colors.topup,
-    },
-    tipMessage: {
-        fontSize: 11,
-        color: colors.textSecondary,
-        marginTop: 2,
-    },
-    allGoodContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        padding: 12,
-        backgroundColor: `${colors.success}10`,
-        borderRadius: 12,
-    },
-    allGoodEmoji: {
-        fontSize: 24,
-    },
-    allGoodTitle: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: colors.success,
-    },
-    allGoodMessage: {
-        fontSize: 11,
-        color: colors.textSecondary,
-    },
-});
